@@ -1,28 +1,37 @@
 const React = require('react');
-const { Alert, Pressable, ScrollView, StyleSheet, Text, View } = require('react-native');
+const { Alert, ScrollView, StyleSheet, Text, View } = require('react-native');
 const { useRoute } = require('@react-navigation/native');
 const { Screen } = require('../components/Screen');
 const { AppButton } = require('../components/AppButton');
 const { AppInput } = require('../components/AppInput');
-const { SectionCard } = require('../components/SectionCard');
+const { ServiceArtwork } = require('../components/ServiceArtwork');
 const { useAuth } = require('../contexts/AuthContext');
 const { api } = require('../services/api');
-const { palette, type } = require('../theme');
+const { palette, shadows, spacing } = require('../theme');
+
+function formatMoney(value) {
+  if (!value) {
+    return 'A coordinar';
+  }
+
+  return `ARS ${Number(value).toLocaleString('es-AR')}`;
+}
 
 function CreateServiceRequestScreen({ navigation }) {
   const route = useRoute();
   const { token } = useAuth();
   const professional = route.params.professional;
+  const packageOption = route.params.packageOption || null;
   const [loading, setLoading] = React.useState(false);
   const [form, setForm] = React.useState({
     professionalId: professional.id,
     categoryId: professional.categories?.[0]?.id || '',
-    title: '',
+    title: packageOption ? `${packageOption.label} - ${professional.businessName}` : '',
     customerMessage: '',
     city: professional.city || '',
     province: professional.province || '',
     addressLine: '',
-    budgetAmount: '',
+    budgetAmount: packageOption?.price ? String(packageOption.price) : '',
     budgetCurrency: 'ARS',
   });
 
@@ -49,68 +58,116 @@ function CreateServiceRequestScreen({ navigation }) {
   }
 
   return (
-    <Screen>
-      <SectionCard title={`Solicitar a ${professional.businessName}`} subtitle="El mensaje inicial abre la conversación.">
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-          {professional.categories?.map((category) => (
-            <Pressable
-              key={category.id}
-              onPress={() => updateField('categoryId', category.id)}
-              style={[styles.chip, Number(form.categoryId) === category.id && styles.chipActive]}
-            >
-              <Text style={[styles.chipText, Number(form.categoryId) === category.id && styles.chipTextActive]}>
-                {category.name}
-              </Text>
-            </Pressable>
-          ))}
-        </ScrollView>
-        <AppInput label="Título" value={form.title} onChangeText={(value) => updateField('title', value)} placeholder="Ej. Reparar pérdida en cocina" />
+    <Screen contentStyle={styles.content}>
+      <ServiceArtwork
+        size="banner"
+        icon="clipboard-outline"
+        badge="Checkout"
+        title={professional.businessName}
+        subtitle={packageOption ? `${packageOption.label} package selected` : 'Create your service request'}
+      />
+
+      <View style={[styles.summaryCard, shadows.card]}>
+        <Text style={styles.summaryTitle}>Selected Service</Text>
+
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Service</Text>
+          <Text style={styles.summaryValue}>{professional.categories?.[0]?.name || 'General service'}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Package</Text>
+          <Text style={styles.summaryValue}>{packageOption?.label || 'Custom'}</Text>
+        </View>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Price</Text>
+          <Text style={styles.summaryValue}>{formatMoney(packageOption?.price || form.budgetAmount)}</Text>
+        </View>
+      </View>
+
+      <View style={styles.formBlock}>
         <AppInput
-          label="Mensaje inicial"
+          label="Title"
+          value={form.title}
+          onChangeText={(value) => updateField('title', value)}
+          placeholder="House cleaning service"
+          leftIcon="create-outline"
+        />
+        <AppInput
+          label="Message"
           value={form.customerMessage}
           onChangeText={(value) => updateField('customerMessage', value)}
           multiline
-          placeholder="Contá el problema, urgencia y contexto."
+          placeholder="Describe the issue, urgency, preferred date and any relevant details."
+          leftIcon="chatbubble-ellipses-outline"
         />
-        <AppInput label="Dirección" value={form.addressLine} onChangeText={(value) => updateField('addressLine', value)} />
-        <AppInput label="Ciudad" value={form.city} onChangeText={(value) => updateField('city', value)} />
-        <AppInput label="Provincia" value={form.province} onChangeText={(value) => updateField('province', value)} />
         <AppInput
-          label="Presupuesto estimado"
+          label="Address"
+          value={form.addressLine}
+          onChangeText={(value) => updateField('addressLine', value)}
+          leftIcon="home-outline"
+        />
+        <AppInput
+          label="City"
+          value={form.city}
+          onChangeText={(value) => updateField('city', value)}
+          leftIcon="business-outline"
+        />
+        <AppInput
+          label="Province"
+          value={form.province}
+          onChangeText={(value) => updateField('province', value)}
+          leftIcon="map-outline"
+        />
+        <AppInput
+          label="Budget"
           value={String(form.budgetAmount)}
           onChangeText={(value) => updateField('budgetAmount', value)}
           keyboardType="numeric"
+          prefix="ARS"
+          leftIcon="cash-outline"
         />
-        <AppButton onPress={handleSubmit} loading={loading}>
-          Enviar solicitud
-        </AppButton>
-      </SectionCard>
+      </View>
+
+      <AppButton onPress={handleSubmit} loading={loading}>
+        Confirm Request
+      </AppButton>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  chips: {
-    gap: 10,
+  content: {
+    gap: spacing.lg,
+    paddingBottom: 140,
   },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: '#FFF8EF',
-    borderWidth: 1,
-    borderColor: '#E7D8C5',
+  summaryCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 22,
+    padding: 18,
+    gap: 12,
   },
-  chipActive: {
-    backgroundColor: palette.accent,
-    borderColor: palette.accent,
-  },
-  chipText: {
+  summaryTitle: {
     color: palette.ink,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  summaryLabel: {
+    color: palette.muted,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  summaryValue: {
+    color: palette.ink,
+    fontSize: 14,
     fontWeight: '700',
   },
-  chipTextActive: {
-    color: '#FFFFFF',
+  formBlock: {
+    gap: 14,
   },
 });
 

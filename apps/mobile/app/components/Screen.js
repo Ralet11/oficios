@@ -2,11 +2,16 @@ const React = require('react');
 const { ScrollView, StyleSheet, View } = require('react-native');
 const { SafeAreaView } = require('react-native-safe-area-context');
 const { LinearGradient } = require('expo-linear-gradient');
-const { palette } = require('../theme');
+const { gradients, palette } = require('../theme');
 
-function Screen({ children, scroll = true, contentStyle, gradient = true }) {
+function Screen({ children, scroll = true, contentStyle, gradient = false }) {
   const content = scroll ? (
-    <ScrollView contentContainerStyle={[styles.content, contentStyle]} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      bounces={false}
+      contentContainerStyle={[styles.content, contentStyle]}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       {children}
     </ScrollView>
   ) : (
@@ -16,7 +21,7 @@ function Screen({ children, scroll = true, contentStyle, gradient = true }) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       {gradient ? (
-        <LinearGradient colors={['#F8F2E8', '#F4EFE7', '#E8DCCB']} style={styles.gradient}>
+        <LinearGradient colors={gradients.screen} style={styles.gradient}>
           {content}
         </LinearGradient>
       ) : (
@@ -29,15 +34,16 @@ function Screen({ children, scroll = true, contentStyle, gradient = true }) {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: palette.canvas,
+    backgroundColor: palette.white,
   },
   gradient: {
     flex: 1,
   },
   content: {
-    padding: 20,
-    gap: 16,
-    paddingBottom: 120,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    gap: 18,
+    paddingBottom: 132,
   },
 });
 

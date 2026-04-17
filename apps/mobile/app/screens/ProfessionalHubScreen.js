@@ -310,9 +310,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 999,
-    backgroundColor: '#FFF8EF',
+    backgroundColor: palette.surfaceElevated,
     borderWidth: 1,
-    borderColor: '#E7D8C5',
+    borderColor: palette.borderSoft,
   },
   chipActive: {
     backgroundColor: palette.accent,
@@ -323,13 +323,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   chipTextActive: {
-    color: '#FFFFFF',
+    color: palette.white,
   },
   areaBlock: {
     padding: 14,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#F2E6D6',
+    borderColor: palette.borderMuted,
     gap: 12,
   },
 });

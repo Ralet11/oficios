@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
     minHeight: 110,
     padding: 16,
     borderRadius: 20,
-    backgroundColor: '#FFF8EF',
+    backgroundColor: palette.surfaceElevated,
     justifyContent: 'space-between',
   },
   statValue: {
@@ -291,7 +291,7 @@ const styles = StyleSheet.create({
   itemBlock: {
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#F2E6D6',
+    borderBottomColor: palette.borderMuted,
     gap: 8,
   },
   itemTitle: {

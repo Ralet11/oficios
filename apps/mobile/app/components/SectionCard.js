@@ -20,10 +20,11 @@ function SectionCard({ title, subtitle, children, footer }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: palette.surface,
-    borderRadius: 28,
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#F2E6D6',
+    borderColor: palette.borderSoft,
     overflow: 'hidden',
+    paddingTop: 2,
   },
   header: {
     paddingHorizontal: 18,
@@ -31,7 +32,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   title: {
-    ...type.subtitle,
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: '800',
+    color: palette.ink,
   },
   subtitle: {
     ...type.body,
@@ -42,7 +46,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     borderTopWidth: 1,
-    borderTopColor: '#F2E6D6',
+    borderTopColor: palette.borderMuted,
     padding: 18,
   },
 });

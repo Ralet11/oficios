@@ -1,0 +1,37 @@
+// Cambiando esta paleta se re-colorea toda la app mobile.
+const palette = {
+  canvas: '#F8FBFF',
+  canvasAccent: '#EDF6FF',
+  surface: '#FFFFFF',
+  surfaceElevated: '#F5F8FC',
+  surfaceMuted: '#EEF4FB',
+  accent: '#39A9FF',
+  accentDark: '#2596F3',
+  accentDeep: '#1674DA',
+  accentSoft: '#E7F4FF',
+  ink: '#20273A',
+  muted: '#7E889B',
+  mutedSoft: '#ADB7C5',
+  border: '#DCE5F0',
+  borderSoft: '#E8EEF5',
+  borderMuted: '#EFF3F8',
+  success: '#2EBE7F',
+  successSoft: '#E5F8EF',
+  warning: '#FDB63F',
+  warningSoft: '#FFF5DE',
+  danger: '#E15353',
+  dangerSoft: '#FFE1E1',
+  sky: '#EAF5FF',
+  info: '#39A9FF',
+  infoSoft: '#EEF7FF',
+  highlight: '#F2F8FF',
+  white: '#FFFFFF',
+  whiteSoft: 'rgba(255, 255, 255, 0.84)',
+  whiteGlass: 'rgba(255, 255, 255, 0.18)',
+  whiteGlassStrong: 'rgba(255, 255, 255, 0.28)',
+  black: '#000000',
+};
+
+module.exports = {
+  palette,
+};

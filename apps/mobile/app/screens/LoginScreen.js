@@ -1,11 +1,12 @@
 const React = require('react');
 const { Alert, Pressable, StyleSheet, Text, View } = require('react-native');
+const { Ionicons } = require('@expo/vector-icons');
 const { Screen } = require('../components/Screen');
 const { AppButton } = require('../components/AppButton');
 const { AppInput } = require('../components/AppInput');
-const { SectionCard } = require('../components/SectionCard');
+const { ServiceArtwork } = require('../components/ServiceArtwork');
 const { useAuth } = require('../contexts/AuthContext');
-const { palette, type } = require('../theme');
+const { palette, shadows, spacing } = require('../theme');
 
 function LoginScreen({ navigation }) {
   const { signIn, signInWithProvider } = useAuth();
@@ -18,7 +19,7 @@ function LoginScreen({ navigation }) {
       setLoading(true);
       await signIn({ email, password });
     } catch (error) {
-      Alert.alert('No se pudo iniciar sesión', error.message);
+      Alert.alert('No se pudo iniciar sesion', error.message);
     } finally {
       setLoading(false);
     }
@@ -36,73 +37,158 @@ function LoginScreen({ navigation }) {
         lastName,
       });
     } catch (error) {
-      Alert.alert('No se pudo iniciar sesión social', error.message);
+      Alert.alert('No se pudo iniciar sesion social', error.message);
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <Screen>
-      <View style={styles.hero}>
-        <Text style={styles.kicker}>Marketplace de oficios</Text>
-        <Text style={styles.title}>Encontrá profesionales confiables en minutos.</Text>
-        <Text style={styles.copy}>
-          Buscá por rubro, enviá una solicitud, chateá dentro de la app y desbloqueá el contacto cuando acepten.
-        </Text>
+    <Screen contentStyle={styles.content}>
+      <View style={styles.topRow}>
+        <Pressable onPress={() => navigation.navigate('Welcome')} style={styles.iconButton}>
+          <Ionicons name="arrow-back" size={18} color={palette.ink} />
+        </Pressable>
       </View>
 
-      <SectionCard title="Ingresá a tu cuenta" subtitle="Usá las credenciales del seed o registrá una nueva cuenta.">
-        <AppInput label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
-        <AppInput label="Contraseña" value={password} onChangeText={setPassword} secureTextEntry />
+      <ServiceArtwork
+        size="banner"
+        icon="person-outline"
+        badge="Sign In"
+        title="Welcome back"
+        subtitle="Manage bookings, messages and trusted professionals from one place."
+      />
+
+      <View style={[styles.formCard, shadows.card]}>
+        <View style={styles.formHeader}>
+          <Text style={styles.formTitle}>Sign In</Text>
+          <Text style={styles.formCopy}>Use a seeded demo account or continue with a social provider.</Text>
+        </View>
+
+        <AppInput
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          leftIcon="mail-outline"
+        />
+        <AppInput
+          label="Password"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          leftIcon="lock-closed-outline"
+          rightIcon="eye-outline"
+        />
+
         <AppButton onPress={handleLogin} loading={loading}>
-          Iniciar sesión
+          Sign In
         </AppButton>
-        <AppButton onPress={() => handleDemoSocial('GOOGLE')} variant="secondary" loading={loading}>
-          Continuar con Google
-        </AppButton>
-        <AppButton onPress={() => handleDemoSocial('APPLE')} variant="ghost" loading={loading}>
-          Continuar con Apple
-        </AppButton>
-      </SectionCard>
 
-      <SectionCard title="Accesos del seed">
-        <Text style={styles.seed}>Admin: `admin@oficios.app / Admin1234`</Text>
-        <Text style={styles.seed}>Cliente: `cliente@oficios.app / Cliente1234`</Text>
-        <Text style={styles.seed}>Profesional: `pro@oficios.app / Profesional1234`</Text>
-      </SectionCard>
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>or continue with</Text>
+          <View style={styles.dividerLine} />
+        </View>
 
-      <Pressable onPress={() => navigation.navigate('Register')}>
-        <Text style={styles.link}>Crear cuenta nueva</Text>
+        <AppButton onPress={() => handleDemoSocial('GOOGLE')} variant="secondary" loading={loading} icon="logo-google">
+          Continue with Google
+        </AppButton>
+        <AppButton onPress={() => handleDemoSocial('APPLE')} variant="ghost" loading={loading} icon="logo-apple">
+          Continue with Apple
+        </AppButton>
+
+        <View style={styles.seedBox}>
+          <Text style={styles.seedTitle}>Quick Access</Text>
+          <Text style={styles.seedText}>Admin: admin@oficios.app / Admin1234</Text>
+          <Text style={styles.seedText}>Customer: cliente@oficios.app / Cliente1234</Text>
+          <Text style={styles.seedText}>Professional: pro@oficios.app / Profesional1234</Text>
+        </View>
+      </View>
+
+      <Pressable onPress={() => navigation.navigate('Register')} style={styles.footerLink}>
+        <Text style={styles.footerText}>Don't have an account? Sign Up</Text>
       </Pressable>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    gap: 10,
-    marginTop: 12,
+  content: {
+    gap: spacing.lg,
   },
-  kicker: {
-    ...type.label,
-    color: palette.accentDark,
+  topRow: {
+    flexDirection: 'row',
   },
-  title: {
-    ...type.title,
+  iconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.surfaceElevated,
   },
-  copy: {
-    ...type.body,
+  formCard: {
+    backgroundColor: palette.surface,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: palette.borderSoft,
+    padding: 20,
+    gap: 14,
+  },
+  formHeader: {
+    gap: 4,
+  },
+  formTitle: {
     color: palette.ink,
+    fontSize: 29,
+    fontWeight: '800',
   },
-  link: {
-    color: palette.accentDark,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  seed: {
+  formCopy: {
+    color: palette.muted,
     fontSize: 14,
+    lineHeight: 20,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: palette.border,
+  },
+  dividerText: {
+    color: palette.muted,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  seedBox: {
+    padding: 16,
+    borderRadius: 18,
+    backgroundColor: palette.surfaceElevated,
+    gap: 4,
+  },
+  seedTitle: {
     color: palette.ink,
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  seedText: {
+    color: palette.muted,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  footerLink: {
+    alignItems: 'center',
+    paddingBottom: 10,
+  },
+  footerText: {
+    color: palette.accentDark,
+    fontSize: 14,
+    fontWeight: '700',
   },
 });
 

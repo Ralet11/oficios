@@ -1,0 +1,9 @@
+{
+  "name": "@oficios/contracts",
+  "version": "1.0.0",
+  "main": "src/index.js",
+  "dependencies": {
+    "@oficios/domain": "1.0.0",
+    "zod": "^3.24.1"
+  }
+}

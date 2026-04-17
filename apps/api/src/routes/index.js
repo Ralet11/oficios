@@ -1,0 +1,20 @@
+const express = require('express');
+const authRoutes = require('./auth-routes');
+const categoriesRoutes = require('./categories-routes');
+const professionalsRoutes = require('./professionals-routes');
+const serviceRequestsRoutes = require('./service-requests-routes');
+const reviewsRoutes = require('./reviews-routes');
+const notificationsRoutes = require('./notifications-routes');
+const adminRoutes = require('./admin-routes');
+
+const router = express.Router();
+
+router.use('/auth', authRoutes);
+router.use('/categories', categoriesRoutes);
+router.use('/professionals', professionalsRoutes);
+router.use('/service-requests', serviceRequestsRoutes);
+router.use('/reviews', reviewsRoutes);
+router.use('/notifications', notificationsRoutes);
+router.use('/admin', adminRoutes);
+
+module.exports = router;

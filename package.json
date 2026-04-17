@@ -1,0 +1,14 @@
+{
+  "name": "oficios-marketplace",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:api": "npm --workspace @oficios/api run dev",
+    "dev:mobile": "npm --workspace @oficios/mobile run start",
+    "db:seed": "npm --workspace @oficios/api run db:seed"
+  }
+}

@@ -2,7 +2,6 @@ const React = require('react');
 const {
   ActivityIndicator,
   Alert,
-  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -69,7 +68,6 @@ function getUserInitials(user) {
 
 function HomeScreen({ navigation }) {
   const { user } = useAuth();
-  const spotlightAnim = React.useRef(new Animated.Value(1)).current;
   const [loading, setLoading] = React.useState(true);
   const [fetching, setFetching] = React.useState(false);
   const [categories, setCategories] = React.useState([]);
@@ -80,8 +78,6 @@ function HomeScreen({ navigation }) {
     availableNow: false,
   });
   const [draftText, setDraftText] = React.useState('');
-  const [rotationIndex, setRotationIndex] = React.useState(0);
-  const [displayedSpotlight, setDisplayedSpotlight] = React.useState(null);
 
   async function requestProfessionals(nextFilters) {
     return api.professionals({
@@ -148,18 +144,6 @@ function HomeScreen({ navigation }) {
     };
   }, []);
 
-  React.useEffect(() => {
-    if (filters.categoryId || categories.length < 2) {
-      return undefined;
-    }
-
-    const timer = setInterval(() => {
-      setRotationIndex((current) => (current + 1) % categories.length);
-    }, 3400);
-
-    return () => clearInterval(timer);
-  }, [categories, filters.categoryId]);
-
   function applyFilters(nextFilters) {
     setFilters(nextFilters);
     loadProfessionals(nextFilters);
@@ -199,53 +183,14 @@ function HomeScreen({ navigation }) {
   const rankedProfessionals = sortProfessionals(professionals, filters.categoryId);
   const featuredProfessional = rankedProfessionals[0] || null;
   const gridProfessionals = rankedProfessionals.slice(1, 7);
-  const categoryCards = categories.slice(0, 4);
-  const homeChips = ['All Service', ...categories.slice(0, 4).map((category) => category.name)];
   const hasActiveFilters = Boolean(filters.text || filters.categoryId || filters.availableNow || draftText.trim());
-  const spotlightCategory =
-    activeCategory || (categories.length ? categories[rotationIndex % categories.length] : null);
+  const spotlightCategory = activeCategory || categories[0] || null;
   const spotlightTheme = getCategoryTheme(
     spotlightCategory,
     categories.findIndex((category) => String(category.id) === String(spotlightCategory?.id)),
   );
-  const spotlightSignature = [
-    spotlightTheme.key,
-    spotlightTheme.badge,
-    spotlightTheme.title,
-    spotlightTheme.subtitle,
-  ].join('|');
-
-  React.useEffect(() => {
-    if (!displayedSpotlight) {
-      setDisplayedSpotlight(spotlightTheme);
-      return;
-    }
-
-    if (displayedSpotlight.key === spotlightTheme.key) {
-      return;
-    }
-
-    Animated.timing(spotlightAnim, {
-      toValue: 0,
-      duration: 180,
-      useNativeDriver: true,
-    }).start(({ finished }) => {
-      if (!finished) {
-        return;
-      }
-
-      setDisplayedSpotlight(spotlightTheme);
-      spotlightAnim.setValue(0);
-      Animated.timing(spotlightAnim, {
-        toValue: 1,
-        duration: 260,
-        useNativeDriver: true,
-      }).start();
-    });
-  }, [displayedSpotlight, spotlightAnim, spotlightSignature, spotlightTheme]);
-
-  const spotlightCard = displayedSpotlight || spotlightTheme;
-  const featuredCategoryName = activeCategory?.name || spotlightCard.categoryName;
+  const spotlightCard = spotlightTheme;
+  const featuredCategoryName = activeCategory?.name || 'All Service';
   const featuredArtworkIcon =
     featuredProfessional?.categories?.[0]?.icon ||
     getCategoryTheme(featuredProfessional?.categories?.[0], 0).icon;
@@ -315,31 +260,10 @@ function HomeScreen({ navigation }) {
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>{activeCategory ? 'Categoria Activa' : 'Inspiracion del Dia'}</Text>
-        <Text style={styles.sectionLink}>{activeCategory ? activeCategory.name : 'Rotando oficios'}</Text>
+        <Text style={styles.sectionLink}>{activeCategory ? activeCategory.name : 'All Service'}</Text>
       </View>
 
-      <Animated.View
-        style={[
-          styles.spotlightShell,
-          {
-            opacity: spotlightAnim,
-            transform: [
-              {
-                translateY: spotlightAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [18, 0],
-                }),
-              },
-              {
-                scale: spotlightAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.97, 1],
-                }),
-              },
-            ],
-          },
-        ]}
-      >
+      <View style={styles.spotlightShell}>
         <Pressable
           onPress={() => {
             if (!spotlightCard.categoryId) {
@@ -360,20 +284,27 @@ function HomeScreen({ navigation }) {
           >
             <View style={styles.offerButton}>
               <Text style={styles.offerButtonText}>
-                {activeCategory ? 'Ver especialistas' : `Explorar ${spotlightCard.categoryName}`}
+                {activeCategory ? 'Ver especialistas' : 'Explorar servicios'}
               </Text>
             </View>
           </ServiceArtwork>
         </Pressable>
-      </Animated.View>
+      </View>
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Service Category</Text>
-        <Text style={styles.sectionLink}>See All</Text>
+        <Text style={styles.sectionLink}>{activeCategory?.name || 'All Service'}</Text>
       </View>
 
-      <View style={styles.categoryGrid}>
-        {categoryCards.map((category, index) => {
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRail}>
+        <Pressable onPress={() => handleCategoryPress('')} style={styles.categoryItem}>
+          <View style={[styles.categoryIconWrap, !filters.categoryId && styles.categoryIconWrapActive]}>
+            <Ionicons name="apps-outline" size={20} color={!filters.categoryId ? palette.white : palette.accentDark} />
+          </View>
+          <Text style={styles.categoryName}>All Service</Text>
+        </Pressable>
+
+        {categories.map((category, index) => {
           const active = String(filters.categoryId) === String(category.id);
 
           return (
@@ -386,37 +317,6 @@ function HomeScreen({ navigation }) {
                 />
               </View>
               <Text style={styles.categoryName}>{category.name}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Home Service</Text>
-        <Text style={styles.sectionLink}>See All</Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRail}>
-        {homeChips.map((chip) => {
-          const active = chip === 'All Service' ? !filters.categoryId : activeCategory?.name === chip;
-
-          return (
-            <Pressable
-              key={chip}
-              onPress={() => {
-                if (chip === 'All Service') {
-                  handleCategoryPress('');
-                  return;
-                }
-
-                const selected = categories.find((category) => category.name === chip);
-                if (selected) {
-                  handleCategoryPress(selected.id);
-                }
-              }}
-              style={[styles.segmentChip, active && styles.segmentChipActive]}
-            >
-              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{chip}</Text>
             </Pressable>
           );
         })}
@@ -662,15 +562,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  categoryGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
+  categoryRail: {
+    gap: 14,
+    paddingRight: 8,
   },
   categoryItem: {
-    flex: 1,
     alignItems: 'center',
     gap: 8,
+    width: 76,
   },
   categoryIconWrap: {
     width: 58,
@@ -688,27 +587,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  chipRail: {
-    gap: 10,
-  },
-  segmentChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: palette.surfaceElevated,
-  },
-  segmentChipActive: {
-    backgroundColor: palette.accentSoft,
-  },
-  segmentText: {
-    color: palette.muted,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  segmentTextActive: {
-    color: palette.accentDark,
-    fontWeight: '700',
   },
   featuredPressable: {
     borderRadius: 24,

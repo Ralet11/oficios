@@ -15,24 +15,10 @@ const { AppButton } = require('../components/AppButton');
 const { EmptyState } = require('../components/EmptyState');
 const { LoadingView } = require('../components/LoadingView');
 const { ServiceArtwork } = require('../components/ServiceArtwork');
+const { getCategoryIcon, getCategoryTheme } = require('../config/categoryVisuals');
 const { useAuth } = require('../contexts/AuthContext');
 const { api } = require('../services/api');
 const { palette, shadows, spacing } = require('../theme');
-
-const CATEGORY_ICONS = [
-  'sparkles-outline',
-  'water-outline',
-  'flash-outline',
-  'construct-outline',
-  'brush-outline',
-  'leaf-outline',
-  'snow-outline',
-  'hammer-outline',
-];
-
-function getCategoryIcon(index) {
-  return CATEGORY_ICONS[index % CATEGORY_ICONS.length];
-}
 
 function getRecommendationScore(professional, activeCategoryId) {
   const hasCategoryMatch = professional.categories?.some((category) => String(category.id) === String(activeCategoryId));
@@ -197,9 +183,17 @@ function HomeScreen({ navigation }) {
   const rankedProfessionals = sortProfessionals(professionals, filters.categoryId);
   const featuredProfessional = rankedProfessionals[0] || null;
   const gridProfessionals = rankedProfessionals.slice(1, 7);
-  const categoryCards = categories.slice(0, 4);
-  const homeChips = ['All Service', ...categories.slice(0, 4).map((category) => category.name)];
   const hasActiveFilters = Boolean(filters.text || filters.categoryId || filters.availableNow || draftText.trim());
+  const spotlightCategory = activeCategory || categories[0] || null;
+  const spotlightTheme = getCategoryTheme(
+    spotlightCategory,
+    categories.findIndex((category) => String(category.id) === String(spotlightCategory?.id)),
+  );
+  const spotlightCard = spotlightTheme;
+  const featuredCategoryName = activeCategory?.name || 'All Service';
+  const featuredArtworkIcon =
+    featuredProfessional?.categories?.[0]?.icon ||
+    getCategoryTheme(featuredProfessional?.categories?.[0], 0).icon;
 
   if (loading) {
     return <LoadingView label="Buscando profesionales..." />;
@@ -216,7 +210,7 @@ function HomeScreen({ navigation }) {
             <Text style={styles.userName}>Hi, {user?.firstName || 'Cliente'}</Text>
             <View style={styles.locationRow}>
               <Ionicons name="location" size={13} color={palette.accentDark} />
-              <Text style={styles.locationText}>{activeCategory ? activeCategory.name : 'Argentina'}</Text>
+              <Text style={styles.locationText}>{featuredCategoryName || 'Argentina'}</Text>
             </View>
           </View>
         </View>
@@ -265,69 +259,64 @@ function HomeScreen({ navigation }) {
       </View>
 
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Special Offers</Text>
-        <Text style={styles.sectionLink}>See All</Text>
+        <Text style={styles.sectionTitle}>{activeCategory ? 'Categoria Activa' : 'Inspiracion del Dia'}</Text>
+        <Text style={styles.sectionLink}>{activeCategory ? activeCategory.name : 'All Service'}</Text>
       </View>
 
-      <ServiceArtwork
-        size="banner"
-        icon="pricetag-outline"
-        badge="25% OFF"
-        style={styles.offerCard}
-        title="25% OFF"
-        subtitle="Get discount for every order, only valid for today."
-      >
-        <View style={styles.offerButton}>
-          <Text style={styles.offerButtonText}>Get Discount</Text>
-        </View>
-      </ServiceArtwork>
+      <View style={styles.spotlightShell}>
+        <Pressable
+          onPress={() => {
+            if (!spotlightCard.categoryId) {
+              return;
+            }
+
+            applyFilters(buildNextFilters({ categoryId: String(spotlightCard.categoryId) }));
+          }}
+        >
+          <ServiceArtwork
+            size="banner"
+            icon={spotlightCard.icon}
+            colors={spotlightCard.colors}
+            badge={spotlightCard.badge}
+            style={styles.offerCard}
+            title={spotlightCard.title}
+            subtitle={spotlightCard.subtitle}
+          >
+            <View style={styles.offerButton}>
+              <Text style={styles.offerButtonText}>
+                {activeCategory ? 'Ver especialistas' : 'Explorar servicios'}
+              </Text>
+            </View>
+          </ServiceArtwork>
+        </Pressable>
+      </View>
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Service Category</Text>
-        <Text style={styles.sectionLink}>See All</Text>
+        <Text style={styles.sectionLink}>{activeCategory?.name || 'All Service'}</Text>
       </View>
 
-      <View style={styles.categoryGrid}>
-        {categoryCards.map((category, index) => {
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRail}>
+        <Pressable onPress={() => handleCategoryPress('')} style={styles.categoryItem}>
+          <View style={[styles.categoryIconWrap, !filters.categoryId && styles.categoryIconWrapActive]}>
+            <Ionicons name="apps-outline" size={20} color={!filters.categoryId ? palette.white : palette.accentDark} />
+          </View>
+          <Text style={styles.categoryName}>All Service</Text>
+        </Pressable>
+
+        {categories.map((category, index) => {
           const active = String(filters.categoryId) === String(category.id);
 
           return (
             <Pressable key={category.id} onPress={() => handleCategoryPress(category.id)} style={styles.categoryItem}>
               <View style={[styles.categoryIconWrap, active && styles.categoryIconWrapActive]}>
-                <Ionicons name={getCategoryIcon(index)} size={20} color={active ? palette.white : palette.accentDark} />
+                <Ionicons
+                  name={getCategoryIcon(category, index)}
+                  size={20}
+                  color={active ? palette.white : palette.accentDark}
+                />
               </View>
               <Text style={styles.categoryName}>{category.name}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Home Service</Text>
-        <Text style={styles.sectionLink}>See All</Text>
-      </View>
-
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRail}>
-        {homeChips.map((chip) => {
-          const active = chip === 'All Service' ? !filters.categoryId : activeCategory?.name === chip;
-
-          return (
-            <Pressable
-              key={chip}
-              onPress={() => {
-                if (chip === 'All Service') {
-                  handleCategoryPress('');
-                  return;
-                }
-
-                const selected = categories.find((category) => category.name === chip);
-                if (selected) {
-                  handleCategoryPress(selected.id);
-                }
-              }}
-              style={[styles.segmentChip, active && styles.segmentChipActive]}
-            >
-              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{chip}</Text>
             </Pressable>
           );
         })}
@@ -341,8 +330,9 @@ function HomeScreen({ navigation }) {
           <View style={[styles.featuredCard, shadows.card]}>
             <ServiceArtwork
               size="banner"
-              icon={getCategoryIcon(0)}
-              badge="Recommended"
+              icon={featuredArtworkIcon}
+              colors={spotlightCard.colors}
+              badge={featuredCategoryName ? `${featuredCategoryName} recomendado` : 'Recommended'}
               style={styles.featuredArtwork}
             />
 
@@ -395,7 +385,11 @@ function HomeScreen({ navigation }) {
               style={styles.gridCardPressable}
             >
               <View style={[styles.gridCard, shadows.card]}>
-                <ServiceArtwork size="thumb" icon={getCategoryIcon(pairIndex + index + 1)} style={styles.gridArtwork} />
+                <ServiceArtwork
+                  size="thumb"
+                  icon={getCategoryIcon(professional.categories?.[0], pairIndex + index + 1)}
+                  style={styles.gridArtwork}
+                />
                 <Text numberOfLines={1} style={styles.gridTitle}>
                   {professional.businessName}
                 </Text>
@@ -552,6 +546,9 @@ const styles = StyleSheet.create({
   offerCard: {
     minHeight: 156,
   },
+  spotlightShell: {
+    borderRadius: 24,
+  },
   offerButton: {
     alignSelf: 'flex-start',
     marginTop: 8,
@@ -565,15 +562,14 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '800',
   },
-  categoryGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
+  categoryRail: {
+    gap: 14,
+    paddingRight: 8,
   },
   categoryItem: {
-    flex: 1,
     alignItems: 'center',
     gap: 8,
+    width: 76,
   },
   categoryIconWrap: {
     width: 58,
@@ -591,27 +587,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
-  },
-  chipRail: {
-    gap: 10,
-  },
-  segmentChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: palette.surfaceElevated,
-  },
-  segmentChipActive: {
-    backgroundColor: palette.accentSoft,
-  },
-  segmentText: {
-    color: palette.muted,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  segmentTextActive: {
-    color: palette.accentDark,
-    fontWeight: '700',
   },
   featuredPressable: {
     borderRadius: 24,

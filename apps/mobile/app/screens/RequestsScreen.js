@@ -6,6 +6,7 @@ const { Screen } = require('../components/Screen');
 const { EmptyState } = require('../components/EmptyState');
 const { LoadingView } = require('../components/LoadingView');
 const { ServiceArtwork } = require('../components/ServiceArtwork');
+const { getCategoryIcon } = require('../config/categoryVisuals');
 const { useAuth } = require('../contexts/AuthContext');
 const { api } = require('../services/api');
 const { palette, shadows, spacing } = require('../theme');
@@ -137,7 +138,7 @@ function RequestsScreen({ navigation }) {
               <View style={[styles.bookingCard, shadows.card]}>
                 <ServiceArtwork
                   size="thumb"
-                  icon={index % 2 === 0 ? 'construct-outline' : 'sparkles-outline'}
+                  icon={getCategoryIcon(request.category, index)}
                   style={styles.bookingArt}
                 />
 

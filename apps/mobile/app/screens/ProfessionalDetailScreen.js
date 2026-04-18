@@ -8,6 +8,7 @@ const { EmptyState } = require('../components/EmptyState');
 const { LoadingView } = require('../components/LoadingView');
 const { SectionCard } = require('../components/SectionCard');
 const { ServiceArtwork } = require('../components/ServiceArtwork');
+const { getCategoryIcon } = require('../config/categoryVisuals');
 const { useAuth } = require('../contexts/AuthContext');
 const { api } = require('../services/api');
 const { palette, shadows, spacing } = require('../theme');
@@ -87,13 +88,14 @@ function ProfessionalDetailScreen({ navigation }) {
   const location = [professional.city, professional.province].filter(Boolean).join(', ') || 'Argentina';
   const plans = buildPlans(professional);
   const selectedPlan = plans.find((plan) => plan.key === selectedPlanKey) || plans[0];
+  const heroIcon = getCategoryIcon(professional.categories?.[0], 0);
 
   return (
     <Screen contentStyle={styles.content}>
       <View style={styles.heroShell}>
         <ServiceArtwork
           size="hero"
-          icon="construct-outline"
+          icon={heroIcon}
           badge="Top Rated"
           style={styles.heroArtwork}
         />

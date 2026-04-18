@@ -15,9 +15,6 @@ function WelcomeScreen({ navigation }) {
           </View>
           <Text style={styles.brandText}>Oficios</Text>
         </View>
-        <Pressable onPress={() => navigation.navigate('Login')}>
-          <Text style={styles.skipText}>Skip</Text>
-        </Pressable>
       </View>
 
       <ServiceArtwork size="hero" icon="sparkles-outline" style={styles.heroArt} />
@@ -54,8 +51,8 @@ const styles = StyleSheet.create({
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'flex-start',
   },
   brand: {
     flexDirection: 'row',
@@ -79,11 +76,6 @@ const styles = StyleSheet.create({
     color: palette.ink,
     fontSize: 20,
     fontWeight: '800',
-  },
-  skipText: {
-    color: palette.muted,
-    fontSize: 14,
-    fontWeight: '600',
   },
   heroArt: {
     minHeight: 340,

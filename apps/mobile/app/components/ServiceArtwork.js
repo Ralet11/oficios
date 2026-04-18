@@ -31,6 +31,7 @@ const SIZE_MAP = {
 function ServiceArtwork({
   size = 'hero',
   icon = 'construct-outline',
+  colors,
   badge,
   title,
   subtitle,
@@ -38,9 +39,10 @@ function ServiceArtwork({
   style,
 }) {
   const metrics = SIZE_MAP[size] || SIZE_MAP.hero;
+  const gradientColors = colors || [palette.accentDark, palette.accent];
 
   return (
-    <LinearGradient colors={[palette.accentDark, palette.accent]} style={[styles.base, { minHeight: metrics.minHeight }, style]}>
+    <LinearGradient colors={gradientColors} style={[styles.base, { minHeight: metrics.minHeight }, style]}>
       <View style={styles.orbLarge} />
       <View style={styles.orbSmall} />
       {badge ? (

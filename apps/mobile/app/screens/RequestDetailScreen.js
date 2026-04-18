@@ -10,6 +10,7 @@ const { LoadingView } = require('../components/LoadingView');
 const { SectionCard } = require('../components/SectionCard');
 const { ServiceArtwork } = require('../components/ServiceArtwork');
 const { StatusBadge } = require('../components/StatusBadge');
+const { getCategoryIcon } = require('../config/categoryVisuals');
 const { useAuth } = require('../contexts/AuthContext');
 const { api } = require('../services/api');
 const { palette, spacing } = require('../theme');
@@ -151,7 +152,7 @@ function RequestDetailScreen() {
     <Screen contentStyle={styles.content}>
       <ServiceArtwork
         size="banner"
-        icon="clipboard-outline"
+        icon={getCategoryIcon(detail.category, 0)}
         badge={detail.category?.name || 'Booking'}
         title={detail.title}
         subtitle={location}

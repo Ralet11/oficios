@@ -2,6 +2,7 @@ const React = require('react');
 const {
   ActivityIndicator,
   Alert,
+  Animated,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,24 +16,10 @@ const { AppButton } = require('../components/AppButton');
 const { EmptyState } = require('../components/EmptyState');
 const { LoadingView } = require('../components/LoadingView');
 const { ServiceArtwork } = require('../components/ServiceArtwork');
+const { getCategoryIcon, getCategoryTheme } = require('../config/categoryVisuals');
 const { useAuth } = require('../contexts/AuthContext');
 const { api } = require('../services/api');
 const { palette, shadows, spacing } = require('../theme');
-
-const CATEGORY_ICONS = [
-  'sparkles-outline',
-  'water-outline',
-  'flash-outline',
-  'construct-outline',
-  'brush-outline',
-  'leaf-outline',
-  'snow-outline',
-  'hammer-outline',
-];
-
-function getCategoryIcon(index) {
-  return CATEGORY_ICONS[index % CATEGORY_ICONS.length];
-}
 
 function getRecommendationScore(professional, activeCategoryId) {
   const hasCategoryMatch = professional.categories?.some((category) => String(category.id) === String(activeCategoryId));
@@ -82,6 +69,7 @@ function getUserInitials(user) {
 
 function HomeScreen({ navigation }) {
   const { user } = useAuth();
+  const spotlightAnim = React.useRef(new Animated.Value(1)).current;
   const [loading, setLoading] = React.useState(true);
   const [fetching, setFetching] = React.useState(false);
   const [categories, setCategories] = React.useState([]);
@@ -92,6 +80,8 @@ function HomeScreen({ navigation }) {
     availableNow: false,
   });
   const [draftText, setDraftText] = React.useState('');
+  const [rotationIndex, setRotationIndex] = React.useState(0);
+  const [displayedSpotlight, setDisplayedSpotlight] = React.useState(null);
 
   async function requestProfessionals(nextFilters) {
     return api.professionals({
@@ -158,6 +148,18 @@ function HomeScreen({ navigation }) {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (filters.categoryId || categories.length < 2) {
+      return undefined;
+    }
+
+    const timer = setInterval(() => {
+      setRotationIndex((current) => (current + 1) % categories.length);
+    }, 3400);
+
+    return () => clearInterval(timer);
+  }, [categories, filters.categoryId]);
+
   function applyFilters(nextFilters) {
     setFilters(nextFilters);
     loadProfessionals(nextFilters);
@@ -200,6 +202,53 @@ function HomeScreen({ navigation }) {
   const categoryCards = categories.slice(0, 4);
   const homeChips = ['All Service', ...categories.slice(0, 4).map((category) => category.name)];
   const hasActiveFilters = Boolean(filters.text || filters.categoryId || filters.availableNow || draftText.trim());
+  const spotlightCategory =
+    activeCategory || (categories.length ? categories[rotationIndex % categories.length] : null);
+  const spotlightTheme = getCategoryTheme(
+    spotlightCategory,
+    categories.findIndex((category) => String(category.id) === String(spotlightCategory?.id)),
+  );
+  const spotlightSignature = [
+    spotlightTheme.key,
+    spotlightTheme.badge,
+    spotlightTheme.title,
+    spotlightTheme.subtitle,
+  ].join('|');
+
+  React.useEffect(() => {
+    if (!displayedSpotlight) {
+      setDisplayedSpotlight(spotlightTheme);
+      return;
+    }
+
+    if (displayedSpotlight.key === spotlightTheme.key) {
+      return;
+    }
+
+    Animated.timing(spotlightAnim, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(({ finished }) => {
+      if (!finished) {
+        return;
+      }
+
+      setDisplayedSpotlight(spotlightTheme);
+      spotlightAnim.setValue(0);
+      Animated.timing(spotlightAnim, {
+        toValue: 1,
+        duration: 260,
+        useNativeDriver: true,
+      }).start();
+    });
+  }, [displayedSpotlight, spotlightAnim, spotlightSignature, spotlightTheme]);
+
+  const spotlightCard = displayedSpotlight || spotlightTheme;
+  const featuredCategoryName = activeCategory?.name || spotlightCard.categoryName;
+  const featuredArtworkIcon =
+    featuredProfessional?.categories?.[0]?.icon ||
+    getCategoryTheme(featuredProfessional?.categories?.[0], 0).icon;
 
   if (loading) {
     return <LoadingView label="Buscando profesionales..." />;
@@ -216,7 +265,7 @@ function HomeScreen({ navigation }) {
             <Text style={styles.userName}>Hi, {user?.firstName || 'Cliente'}</Text>
             <View style={styles.locationRow}>
               <Ionicons name="location" size={13} color={palette.accentDark} />
-              <Text style={styles.locationText}>{activeCategory ? activeCategory.name : 'Argentina'}</Text>
+              <Text style={styles.locationText}>{featuredCategoryName || 'Argentina'}</Text>
             </View>
           </View>
         </View>
@@ -265,22 +314,58 @@ function HomeScreen({ navigation }) {
       </View>
 
       <View style={styles.sectionRow}>
-        <Text style={styles.sectionTitle}>Special Offers</Text>
-        <Text style={styles.sectionLink}>See All</Text>
+        <Text style={styles.sectionTitle}>{activeCategory ? 'Categoria Activa' : 'Inspiracion del Dia'}</Text>
+        <Text style={styles.sectionLink}>{activeCategory ? activeCategory.name : 'Rotando oficios'}</Text>
       </View>
 
-      <ServiceArtwork
-        size="banner"
-        icon="pricetag-outline"
-        badge="25% OFF"
-        style={styles.offerCard}
-        title="25% OFF"
-        subtitle="Get discount for every order, only valid for today."
+      <Animated.View
+        style={[
+          styles.spotlightShell,
+          {
+            opacity: spotlightAnim,
+            transform: [
+              {
+                translateY: spotlightAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [18, 0],
+                }),
+              },
+              {
+                scale: spotlightAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.97, 1],
+                }),
+              },
+            ],
+          },
+        ]}
       >
-        <View style={styles.offerButton}>
-          <Text style={styles.offerButtonText}>Get Discount</Text>
-        </View>
-      </ServiceArtwork>
+        <Pressable
+          onPress={() => {
+            if (!spotlightCard.categoryId) {
+              return;
+            }
+
+            applyFilters(buildNextFilters({ categoryId: String(spotlightCard.categoryId) }));
+          }}
+        >
+          <ServiceArtwork
+            size="banner"
+            icon={spotlightCard.icon}
+            colors={spotlightCard.colors}
+            badge={spotlightCard.badge}
+            style={styles.offerCard}
+            title={spotlightCard.title}
+            subtitle={spotlightCard.subtitle}
+          >
+            <View style={styles.offerButton}>
+              <Text style={styles.offerButtonText}>
+                {activeCategory ? 'Ver especialistas' : `Explorar ${spotlightCard.categoryName}`}
+              </Text>
+            </View>
+          </ServiceArtwork>
+        </Pressable>
+      </Animated.View>
 
       <View style={styles.sectionRow}>
         <Text style={styles.sectionTitle}>Service Category</Text>
@@ -294,7 +379,11 @@ function HomeScreen({ navigation }) {
           return (
             <Pressable key={category.id} onPress={() => handleCategoryPress(category.id)} style={styles.categoryItem}>
               <View style={[styles.categoryIconWrap, active && styles.categoryIconWrapActive]}>
-                <Ionicons name={getCategoryIcon(index)} size={20} color={active ? palette.white : palette.accentDark} />
+                <Ionicons
+                  name={getCategoryIcon(category, index)}
+                  size={20}
+                  color={active ? palette.white : palette.accentDark}
+                />
               </View>
               <Text style={styles.categoryName}>{category.name}</Text>
             </Pressable>
@@ -341,8 +430,9 @@ function HomeScreen({ navigation }) {
           <View style={[styles.featuredCard, shadows.card]}>
             <ServiceArtwork
               size="banner"
-              icon={getCategoryIcon(0)}
-              badge="Recommended"
+              icon={featuredArtworkIcon}
+              colors={spotlightCard.colors}
+              badge={featuredCategoryName ? `${featuredCategoryName} recomendado` : 'Recommended'}
               style={styles.featuredArtwork}
             />
 
@@ -395,7 +485,11 @@ function HomeScreen({ navigation }) {
               style={styles.gridCardPressable}
             >
               <View style={[styles.gridCard, shadows.card]}>
-                <ServiceArtwork size="thumb" icon={getCategoryIcon(pairIndex + index + 1)} style={styles.gridArtwork} />
+                <ServiceArtwork
+                  size="thumb"
+                  icon={getCategoryIcon(professional.categories?.[0], pairIndex + index + 1)}
+                  style={styles.gridArtwork}
+                />
                 <Text numberOfLines={1} style={styles.gridTitle}>
                   {professional.businessName}
                 </Text>
@@ -551,6 +645,9 @@ const styles = StyleSheet.create({
   },
   offerCard: {
     minHeight: 156,
+  },
+  spotlightShell: {
+    borderRadius: 24,
   },
   offerButton: {
     alignSelf: 'flex-start',

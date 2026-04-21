@@ -146,6 +146,24 @@ const photoUrls = [
   'https://images.unsplash.com/photo-1450101499163-c8848c66ca85',
 ];
 
+const WORK_POST_TEMPLATES = [
+  {
+    title: 'Antes y despues del trabajo',
+    body: 'Relevamiento inicial, coordinacion con el cliente y resolucion completa del servicio con foco en prolijidad y tiempos.',
+    highlightLines: ['Visita tecnica previa', 'Materiales coordinados', 'Entrega con seguimiento'],
+  },
+  {
+    title: 'Proyecto terminado',
+    body: 'Trabajo ejecutado de punta a punta con registro fotografico del proceso y cierre final validado por el cliente.',
+    highlightLines: ['Plan de trabajo claro', 'Ejecucion ordenada', 'Resultado final documentado'],
+  },
+  {
+    title: 'Intervencion puntual',
+    body: 'Servicio pensado para resolver una necesidad concreta del hogar con respuesta rapida y comunicacion simple.',
+    highlightLines: ['Diagnostico rapido', 'Resolucion en sitio', 'Recomendaciones posteriores'],
+  },
+];
+
 function buildPhone(index) {
   return `+54911${String(10000000 + index).slice(-8)}`;
 }
@@ -228,6 +246,20 @@ async function createProfessionals(models, categoriesBySlug, passwordHash) {
         radiusKm: 15 + (index % 3) * 5,
       },
     ]);
+
+    await models.ProfessionalWorkPost.bulkCreate(
+      WORK_POST_TEMPLATES.slice(0, 2).map((template, postIndex) => ({
+        professionalProfileId: professionalProfile.id,
+        title: `${template.title} - ${professionalSeed.firstName}`,
+        body: `${template.body} Servicio principal: ${categoriesBySlug[professionalSeed.categorySlugs[0]].name}.`,
+        photoUrls: [
+          photoUrls[(index + postIndex) % photoUrls.length],
+          coverUrls[(index + postIndex) % coverUrls.length],
+        ],
+        highlightLines: template.highlightLines,
+        orderIndex: postIndex,
+      })),
+    );
 
     createdProfessionals.push({ user, profile: professionalProfile, seed: professionalSeed });
   }

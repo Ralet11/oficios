@@ -1,5 +1,5 @@
 const React = require('react');
-const { Alert, Pressable, StyleSheet, Text, View } = require('react-native');
+const { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } = require('react-native');
 const { useRoute } = require('@react-navigation/native');
 const { Ionicons } = require('@expo/vector-icons');
 const { Screen } = require('../components/Screen');
@@ -193,6 +193,60 @@ function ProfessionalDetailScreen({ navigation }) {
         )}
       </SectionCard>
 
+      <SectionCard
+        title="Trabajos previos"
+        subtitle="Posts reales del profesional con fotos y notas de trabajos terminados."
+      >
+        {professional.workPosts?.length ? (
+          professional.workPosts.map((post, index) => (
+            <View key={post.id || `${post.title}-${index}`} style={styles.workPostCard}>
+              {post.photoUrls?.length ? (
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.workPostPhotoRail}>
+                  {post.photoUrls.map((photoUrl, photoIndex) => (
+                    <Image
+                      key={`${post.id || index}-photo-${photoIndex}`}
+                      source={{ uri: photoUrl }}
+                      style={[styles.workPostPhoto, photoIndex === 0 && styles.workPostPhotoPrimary]}
+                      resizeMode="cover"
+                    />
+                  ))}
+                </ScrollView>
+              ) : (
+                <View style={styles.workPostFallback}>
+                  <Ionicons name={heroIcon} size={20} color={palette.accentDark} />
+                </View>
+              )}
+
+              <View style={styles.workPostBody}>
+                <View style={styles.workPostTopRow}>
+                  <Text numberOfLines={2} style={styles.workPostTitle}>
+                    {post.title}
+                  </Text>
+                  <Text style={styles.workPostMeta}>{post.photoUrls?.length || 0} fotos</Text>
+                </View>
+
+                <Text style={styles.workPostText}>{post.body}</Text>
+
+                {post.highlightLines?.length ? (
+                  <View style={styles.workPostHighlights}>
+                    {post.highlightLines.map((line) => (
+                      <View key={`${post.id || index}-${line}`} style={styles.workPostHighlightChip}>
+                        <Text style={styles.workPostHighlightText}>{line}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            </View>
+          ))
+        ) : (
+          <EmptyState
+            title="Sin trabajos publicados"
+            message="Este profesional todavia no compartio posts de trabajos previos."
+          />
+        )}
+      </SectionCard>
+
       <SectionCard title="Recent Reviews">
         {detail.reviews?.length ? (
           detail.reviews.map((review) => (
@@ -375,6 +429,74 @@ const styles = StyleSheet.create({
   infoText: {
     color: palette.muted,
     fontSize: 13,
+  },
+  workPostCard: {
+    borderRadius: 20,
+    backgroundColor: palette.surfaceElevated,
+    overflow: 'hidden',
+  },
+  workPostPhotoRail: {
+    padding: 12,
+    gap: 10,
+  },
+  workPostPhoto: {
+    width: 132,
+    height: 110,
+    borderRadius: 16,
+    backgroundColor: palette.surfaceMuted,
+  },
+  workPostPhotoPrimary: {
+    width: 184,
+  },
+  workPostFallback: {
+    height: 112,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: palette.accentSoft,
+  },
+  workPostBody: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    gap: 10,
+  },
+  workPostTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  workPostTitle: {
+    flex: 1,
+    color: palette.ink,
+    fontSize: 16,
+    lineHeight: 21,
+    fontWeight: '800',
+  },
+  workPostMeta: {
+    color: palette.accentDark,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  workPostText: {
+    color: palette.muted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  workPostHighlights: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  workPostHighlightChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: palette.white,
+  },
+  workPostHighlightText: {
+    color: palette.ink,
+    fontSize: 12,
+    fontWeight: '700',
   },
   reviewCard: {
     padding: 14,

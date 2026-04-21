@@ -14,6 +14,7 @@ async function getProfessional(req, res) {
       { model: req.models.User, as: 'user' },
       { model: req.models.Category, as: 'categories', through: { attributes: [] } },
       { model: req.models.ServiceArea, as: 'serviceAreas' },
+      { model: req.models.ProfessionalWorkPost, as: 'workPosts' },
       {
         model: req.models.ServiceRequest,
         as: 'serviceRequests',
@@ -66,6 +67,7 @@ async function getOwnProfessionalProfile(req, res) {
       { model: req.models.User, as: 'user' },
       { model: req.models.Category, as: 'categories', through: { attributes: [] } },
       { model: req.models.ServiceArea, as: 'serviceAreas' },
+      { model: req.models.ProfessionalWorkPost, as: 'workPosts' },
     ],
   });
 
@@ -160,12 +162,42 @@ async function updateProfessionalServiceAreas(req, res) {
   });
 }
 
+async function updateProfessionalWorkPosts(req, res) {
+  const professional = await req.models.ProfessionalProfile.findOne({
+    where: { userId: req.auth.user.id },
+  });
+  if (!professional) {
+    throw new AppError('Professional profile not found', 404);
+  }
+
+  await req.models.ProfessionalWorkPost.destroy({
+    where: { professionalProfileId: professional.id },
+  });
+
+  const workPosts = await Promise.all(
+    req.validated.body.workPosts.map((post, index) =>
+      req.models.ProfessionalWorkPost.create({
+        professionalProfileId: professional.id,
+        title: post.title,
+        body: post.body,
+        photoUrls: post.photoUrls || [],
+        highlightLines: post.highlightLines || [],
+        orderIndex: index,
+      })),
+  );
+
+  res.json({
+    data: workPosts,
+  });
+}
+
 async function submitProfessionalForApproval(req, res) {
   const professional = await req.models.ProfessionalProfile.findOne({
     where: { userId: req.auth.user.id },
     include: [
       { model: req.models.Category, as: 'categories', through: { attributes: [] } },
       { model: req.models.ServiceArea, as: 'serviceAreas' },
+      { model: req.models.ProfessionalWorkPost, as: 'workPosts' },
     ],
   });
 
@@ -198,5 +230,6 @@ module.exports = {
   submitProfessionalForApproval,
   updateProfessionalCategories,
   updateProfessionalServiceAreas,
+  updateProfessionalWorkPosts,
   upsertProfessionalProfile,
 };

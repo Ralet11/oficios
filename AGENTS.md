@@ -33,6 +33,8 @@ Este archivo es la fuente de verdad operativa para humanos y agentes de IA que t
 - Activación del rol profesional sin perder rol cliente.
 - Edición de perfil profesional, fotos, zonas y categorías.
 - Gestión de disponibilidad básica.
+- Publicación de trabajos previos en formato post con multiples fotos, texto y mensajes cortos.
+- Carga de fotos de trabajos previos desde camara o galeria mobile con provider de media configurable.
 - Recepción, aceptación/rechazo y seguimiento de solicitudes.
 
 ### Admin
@@ -70,6 +72,7 @@ Este archivo es la fuente de verdad operativa para humanos y agentes de IA que t
 - `AuthIdentity`
 - `Session`
 - `ProfessionalProfile`
+- `ProfessionalWorkPost`
 - `Category`
 - `ProfessionalCategory`
 - `ServiceArea`
@@ -94,6 +97,8 @@ Este archivo es la fuente de verdad operativa para humanos y agentes de IA que t
 - Una reseña solo puede existir si la solicitud fue aceptada/completada.
 - Máximo una reseña por `serviceRequest`.
 - Mensajería solo entre participantes de la solicitud.
+- Los trabajos previos del profesional son visibles en perfil publico cuando el perfil esta `APPROVED`; el owner puede editarlos siempre desde su hub.
+- Las fotos de trabajos previos se suben por upload directo a un provider configurable desde backend; Cloudinary es el default inicial.
 - La API pública principal de búsqueda es:
   `GET /professionals?categoryId&placeId&lat&lng&radiusKm&minRating&availableNow&text&sort&page&pageSize`
 
@@ -141,6 +146,9 @@ Cada app mantiene su `.env.example` y valida boot-time con Zod.
 - 2026-03-18: app mobile única con múltiples roles.
 - 2026-03-18: solicitud interna + aceptación + mensajería simple + contacto externo desbloqueado.
 - 2026-03-18: favoritos fuera del primer corte.
+- 2026-04-19: trabajos previos del profesional se publican como posts con multiples fotos y texto.
+- 2026-04-19: la carga de fotos de posts usa upload directo con provider configurable; Cloudinary first.
+- 2026-04-19: trabajos previos del profesional se publican como posts con multiples fotos y texto.
 
 ## Open questions
 

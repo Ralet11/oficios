@@ -5,4 +5,5 @@ module.exports = {
   ...require('./professionals'),
   ...require('./reviews'),
   ...require('./service-requests'),
+  ...require('./uploads'),
 };

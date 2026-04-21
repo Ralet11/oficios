@@ -77,10 +77,8 @@ function LoginScreen({ navigation }) {
               <Text style={styles.heroBadgeText}>Image Slot</Text>
             </View>
             <View style={styles.heroCopy}>
-              <Text style={styles.heroTitle}>Tu imagen IA va aca</Text>
-              <Text style={styles.heroSubtitle}>
-                Reemplaza `LOGIN_HERO_IMAGE` por `require(...)` cuando tengas el arte listo.
-              </Text>
+              <Text style={styles.heroTitle}>IMAGEN</Text>
+              
             </View>
           </View>
         </View>

@@ -42,6 +42,17 @@ const professionalProfileSchema = z.object({
   photoUrls: z.array(z.string().url()).max(10).default([]),
 });
 
+const professionalWorkPostSchema = z.object({
+  title: z.string().min(2).max(120),
+  body: z.string().min(10).max(1500),
+  photoUrls: z.array(z.string().url()).max(8).default([]),
+  highlightLines: z.array(z.string().min(2).max(140)).max(6).default([]),
+});
+
+const professionalWorkPostsSchema = z.object({
+  workPosts: z.array(professionalWorkPostSchema).max(12).default([]),
+});
+
 const professionalCategoriesSchema = z.object({
   categoryIds: z.array(z.coerce.number().int().positive()).min(1).max(10),
 });
@@ -78,5 +89,7 @@ module.exports = {
   professionalProfileSchema,
   professionalServiceAreaSchema,
   professionalStatusSchema,
+  professionalWorkPostSchema,
+  professionalWorkPostsSchema,
   searchProfessionalsSchema,
 };

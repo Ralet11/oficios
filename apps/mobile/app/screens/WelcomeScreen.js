@@ -20,7 +20,7 @@ function WelcomeScreen({ navigation }) {
       <ServiceArtwork size="hero" icon="sparkles-outline" style={styles.heroArt} />
 
       <View style={styles.copyBlock}>
-        <Text style={styles.title}>Let's make awesome changes to your home</Text>
+        <Text style={styles.title}>Encuentra tu profesional ideal</Text>
         <Text style={styles.copy}>
           Encuentra profesionales, reserva servicios y sigue cada solicitud desde una experiencia clara y mobile-first.
         </Text>

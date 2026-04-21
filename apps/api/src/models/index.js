@@ -116,6 +116,18 @@ function initModels(sequelize) {
     commonOptions,
   );
 
+  const ProfessionalWorkPost = sequelize.define(
+    'ProfessionalWorkPost',
+    {
+      title: { type: DataTypes.STRING, allowNull: false },
+      body: { type: DataTypes.TEXT, allowNull: false },
+      photoUrls: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      highlightLines: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      orderIndex: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    },
+    commonOptions,
+  );
+
   const ServiceRequest = sequelize.define(
     'ServiceRequest',
     {
@@ -216,6 +228,9 @@ function initModels(sequelize) {
   ProfessionalProfile.hasMany(ServiceArea, { as: 'serviceAreas', foreignKey: 'professionalProfileId' });
   ServiceArea.belongsTo(ProfessionalProfile, { as: 'professionalProfile', foreignKey: 'professionalProfileId' });
 
+  ProfessionalProfile.hasMany(ProfessionalWorkPost, { as: 'workPosts', foreignKey: 'professionalProfileId' });
+  ProfessionalWorkPost.belongsTo(ProfessionalProfile, { as: 'professionalProfile', foreignKey: 'professionalProfileId' });
+
   User.hasMany(ServiceRequest, { as: 'customerRequests', foreignKey: 'customerId' });
   ServiceRequest.belongsTo(User, { as: 'customer', foreignKey: 'customerId' });
 
@@ -249,6 +264,7 @@ function initModels(sequelize) {
     Notification,
     ProfessionalCategory,
     ProfessionalProfile,
+    ProfessionalWorkPost,
     Review,
     ServiceArea,
     ServiceRequest,

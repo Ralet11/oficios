@@ -110,6 +110,12 @@ const api = {
   saveProfessionalServiceAreas(body, token) {
     return request('/professionals/me/service-areas', { method: 'PUT', token, body });
   },
+  saveProfessionalWorkPosts(body, token) {
+    return request('/professionals/me/work-posts', { method: 'PUT', token, body });
+  },
+  createImageUploadIntent(body, token) {
+    return request('/uploads/images/intents', { method: 'POST', token, body });
+  },
   submitProfessionalProfile(token) {
     return request('/professionals/me/submit', { method: 'POST', token });
   },

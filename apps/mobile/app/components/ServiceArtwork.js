@@ -19,6 +19,13 @@ const SIZE_MAP = {
     contentPadding: 18,
     contentWidth: '58%',
   },
+  header: {
+    minHeight: 116,
+    figure: 66,
+    icon: 26,
+    contentPadding: 16,
+    contentWidth: '72%',
+  },
   thumb: {
     minHeight: 112,
     figure: 60,
@@ -40,6 +47,8 @@ function ServiceArtwork({
 }) {
   const metrics = SIZE_MAP[size] || SIZE_MAP.hero;
   const gradientColors = colors || [palette.accentDark, palette.accent];
+  const isHeader = size === 'header';
+  const isThumb = size === 'thumb';
 
   return (
     <LinearGradient colors={gradientColors} style={[styles.base, { minHeight: metrics.minHeight }, style]}>
@@ -52,8 +61,12 @@ function ServiceArtwork({
       ) : null}
 
       <View style={[styles.content, { padding: metrics.contentPadding, maxWidth: metrics.contentWidth }]}>
-        {title ? <Text style={[styles.title, size === 'thumb' && styles.titleSmall]}>{title}</Text> : null}
-        {subtitle ? <Text style={[styles.subtitle, size === 'thumb' && styles.subtitleSmall]}>{subtitle}</Text> : null}
+        {title ? <Text style={[styles.title, isHeader && styles.titleHeader, isThumb && styles.titleSmall]}>{title}</Text> : null}
+        {subtitle ? (
+          <Text style={[styles.subtitle, isHeader && styles.subtitleHeader, isThumb && styles.subtitleSmall]}>
+            {subtitle}
+          </Text>
+        ) : null}
         {children}
       </View>
 
@@ -117,6 +130,10 @@ const styles = StyleSheet.create({
     lineHeight: 36,
     fontWeight: '800',
   },
+  titleHeader: {
+    fontSize: 22,
+    lineHeight: 26,
+  },
   titleSmall: {
     fontSize: 16,
     lineHeight: 20,
@@ -126,6 +143,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
+  },
+  subtitleHeader: {
+    fontSize: 13,
+    lineHeight: 18,
   },
   subtitleSmall: {
     fontSize: 12,

@@ -13,6 +13,13 @@ function serializeUser(user) {
 
 function serializeProfessional(profile, options = {}) {
   const includeContact = options.includeContact === true;
+  const workPosts = [...(profile.workPosts || [])].sort((left, right) => {
+    if ((left.orderIndex || 0) !== (right.orderIndex || 0)) {
+      return (left.orderIndex || 0) - (right.orderIndex || 0);
+    }
+
+    return new Date(right.createdAt || 0) - new Date(left.createdAt || 0);
+  });
 
   return {
     id: profile.id,
@@ -51,6 +58,16 @@ function serializeProfessional(profile, options = {}) {
       lat: area.lat,
       lng: area.lng,
       radiusKm: area.radiusKm,
+    })),
+    workPosts: workPosts.map((post) => ({
+      id: post.id,
+      title: post.title,
+      body: post.body,
+      photoUrls: post.photoUrls || [],
+      highlightLines: post.highlightLines || [],
+      orderIndex: post.orderIndex || 0,
+      createdAt: post.createdAt,
+      updatedAt: post.updatedAt,
     })),
     contact: includeContact
       ? {

@@ -4,6 +4,7 @@ const {
   professionalCategoriesSchema,
   professionalProfileSchema,
   professionalServiceAreaSchema,
+  professionalWorkPostsSchema,
   searchProfessionalsSchema,
 } = require('@oficios/contracts');
 const controller = require('../controllers/professionals-controller');
@@ -40,6 +41,13 @@ router.put(
   requireRole('PROFESSIONAL'),
   validate({ body: professionalServiceAreaSchema }),
   asyncHandler(controller.updateProfessionalServiceAreas),
+);
+router.put(
+  '/me/work-posts',
+  requireAuth,
+  requireRole('PROFESSIONAL'),
+  validate({ body: professionalWorkPostsSchema }),
+  asyncHandler(controller.updateProfessionalWorkPosts),
 );
 router.post(
   '/me/submit',

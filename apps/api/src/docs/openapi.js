@@ -16,6 +16,7 @@ function buildOpenApiDocument() {
       { name: 'Reviews' },
       { name: 'Notifications' },
       { name: 'Admin' },
+      { name: 'Uploads' },
     ],
     paths: {
       '/health': {
@@ -32,8 +33,27 @@ function buildOpenApiDocument() {
       '/auth/login': { post: { tags: ['Auth'], summary: 'Login con email/password' } },
       '/auth/social': { post: { tags: ['Auth'], summary: 'Login social Google/Apple' } },
       '/auth/me': { get: { tags: ['Auth'], summary: 'Usuario autenticado' } },
-      '/professionals': { get: { tags: ['Professionals'], summary: 'Búsqueda pública de profesionales' } },
-      '/professionals/{id}': { get: { tags: ['Professionals'], summary: 'Detalle público de profesional' } },
+      '/professionals': { get: { tags: ['Professionals'], summary: 'Busqueda publica de profesionales' } },
+      '/professionals/{id}': { get: { tags: ['Professionals'], summary: 'Detalle publico de profesional' } },
+      '/professionals/me': {
+        get: { tags: ['Professionals'], summary: 'Perfil profesional propio' },
+        put: { tags: ['Professionals'], summary: 'Guardar ficha profesional propia' },
+      },
+      '/professionals/me/categories': {
+        put: { tags: ['Professionals'], summary: 'Guardar categorias del profesional' },
+      },
+      '/professionals/me/service-areas': {
+        put: { tags: ['Professionals'], summary: 'Guardar zonas de servicio del profesional' },
+      },
+      '/professionals/me/work-posts': {
+        put: { tags: ['Professionals'], summary: 'Guardar trabajos previos del profesional' },
+      },
+      '/professionals/me/submit': {
+        post: { tags: ['Professionals'], summary: 'Enviar perfil profesional a aprobacion' },
+      },
+      '/uploads/images/intents': {
+        post: { tags: ['Uploads'], summary: 'Crear una intencion de subida directa para imagenes del profesional' },
+      },
       '/service-requests': {
         get: { tags: ['Service Requests'], summary: 'Listado de solicitudes del usuario' },
         post: { tags: ['Service Requests'], summary: 'Crear solicitud de servicio' },
@@ -48,14 +68,14 @@ function buildOpenApiDocument() {
         post: { tags: ['Service Requests'], summary: 'Enviar mensaje dentro de una solicitud' },
       },
       '/reviews': {
-        get: { tags: ['Reviews'], summary: 'Listar reseñas' },
-        post: { tags: ['Reviews'], summary: 'Crear reseña' },
+        get: { tags: ['Reviews'], summary: 'Listar resenas' },
+        post: { tags: ['Reviews'], summary: 'Crear resena' },
       },
       '/notifications': {
         get: { tags: ['Notifications'], summary: 'Listar notificaciones' },
       },
       '/admin/overview': {
-        get: { tags: ['Admin'], summary: 'Métricas generales admin' },
+        get: { tags: ['Admin'], summary: 'Metricas generales admin' },
       },
     },
   };

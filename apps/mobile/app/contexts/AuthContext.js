@@ -8,6 +8,7 @@ function AuthProvider({ children }) {
   const [token, setToken] = React.useState(null);
   const [user, setUser] = React.useState(null);
   const [professionalProfile, setProfessionalProfile] = React.useState(null);
+  const [customerProfile, setCustomerProfile] = React.useState(null);
 
   const hydrate = React.useCallback(async () => {
     try {
@@ -21,11 +22,19 @@ function AuthProvider({ children }) {
       setToken(storedToken);
       setUser(response.user);
       setProfessionalProfile(response.professionalProfile);
+
+      try {
+        const customerRes = await api.myCustomerProfile(storedToken);
+        setCustomerProfile(customerRes);
+      } catch (_err) {
+        setCustomerProfile(null);
+      }
     } catch (_error) {
       await api.clearToken();
       setToken(null);
       setUser(null);
       setProfessionalProfile(null);
+      setCustomerProfile(null);
     } finally {
       setBooting(false);
     }
@@ -41,6 +50,13 @@ function AuthProvider({ children }) {
     setUser(session.user);
     const response = await api.me(session.token);
     setProfessionalProfile(response.professionalProfile);
+
+    try {
+      const customerRes = await api.myCustomerProfile(session.token);
+      setCustomerProfile(customerRes);
+    } catch (_err) {
+      setCustomerProfile(null);
+    }
     return response;
   }
 
@@ -52,6 +68,20 @@ function AuthProvider({ children }) {
   async function signUp(payload) {
     const session = await api.register(payload);
     await completeSession(session);
+  }
+
+  async function requestPhoneCode(phone) {
+    return api.startPhoneAuth({ phone });
+  }
+
+  async function continueWithPhone(payload) {
+    const response = await api.verifyPhoneAuth(payload);
+
+    if (response.status === 'AUTHENTICATED' && response.session) {
+      await completeSession(response.session);
+    }
+
+    return response;
   }
 
   async function signInWithProvider(payload) {
@@ -67,6 +97,13 @@ function AuthProvider({ children }) {
     const response = await api.me(token);
     setUser(response.user);
     setProfessionalProfile(response.professionalProfile);
+
+    try {
+      const customerRes = await api.myCustomerProfile(token);
+      setCustomerProfile(customerRes);
+    } catch (_err) {
+      setCustomerProfile(null);
+    }
     return response;
   }
 
@@ -76,12 +113,12 @@ function AuthProvider({ children }) {
         await api.logout(token);
       }
     } catch (_error) {
-      // Ignore logout transport issues and clear session locally.
     } finally {
       await api.clearToken();
       setToken(null);
       setUser(null);
       setProfessionalProfile(null);
+      setCustomerProfile(null);
     }
   }
 
@@ -97,15 +134,19 @@ function AuthProvider({ children }) {
     token,
     user,
     professionalProfile,
+    customerProfile,
     signedIn: Boolean(token && user),
     signIn,
     signUp,
+    requestPhoneCode,
+    continueWithPhone,
     signInWithProvider,
     signOut,
     refreshSession,
     activateProfessionalRole,
     setProfessionalProfile,
     setUser,
+    setCustomerProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

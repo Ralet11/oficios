@@ -12,12 +12,40 @@ const ProfessionalStatus = {
   PAUSED: 'PAUSED',
 };
 
+const ServiceNeedStatus = {
+  DRAFT: 'DRAFT',
+  OPEN: 'OPEN',
+  SELECTION_PENDING_CONFIRMATION: 'SELECTION_PENDING_CONFIRMATION',
+  MATCHED: 'MATCHED',
+  CLOSED: 'CLOSED',
+  CANCELLED: 'CANCELLED',
+};
+
+const ServiceNeedVisibility = {
+  DIRECT_ONLY: 'DIRECT_ONLY',
+  PUBLIC_BOARD: 'PUBLIC_BOARD',
+};
+
 const ServiceRequestStatus = {
   PENDING: 'PENDING',
+  AWAITING_PRO_CONFIRMATION: 'AWAITING_PRO_CONFIRMATION',
   ACCEPTED: 'ACCEPTED',
   REJECTED: 'REJECTED',
   CANCELLED: 'CANCELLED',
   COMPLETED: 'COMPLETED',
+  EXPIRED: 'EXPIRED',
+};
+
+const ServiceRequestOrigin = {
+  DIRECT_INVITE: 'DIRECT_INVITE',
+  PUBLIC_BOARD: 'PUBLIC_BOARD',
+};
+
+const ServiceRequestCloseReason = {
+  CUSTOMER_CANCELLED: 'CUSTOMER_CANCELLED',
+  PROFESSIONAL_REJECTED: 'PROFESSIONAL_REJECTED',
+  CUSTOMER_SELECTED_OTHER: 'CUSTOMER_SELECTED_OTHER',
+  BOARD_CLOSED: 'BOARD_CLOSED',
   EXPIRED: 'EXPIRED',
 };
 
@@ -30,6 +58,7 @@ const AuthProvider = {
   PASSWORD: 'PASSWORD',
   GOOGLE: 'GOOGLE',
   APPLE: 'APPLE',
+  PHONE: 'PHONE',
 };
 
 const NotificationType = {
@@ -47,11 +76,32 @@ const ServiceRequestSort = {
   REVIEW_COUNT_DESC: 'review_count_desc',
 };
 
+const ReviewerRole = {
+  CUSTOMER: 'CUSTOMER',
+  PROFESSIONAL: 'PROFESSIONAL',
+};
+
+const CustomerReviewTag = {
+  COMMUNICATION_CLEAR: 'COMMUNICATION_CLEAR',
+  PUNCTUAL: 'PUNCTUAL',
+  RESPECTFUL: 'RESPECTFUL',
+  PRECISE_REQUEST: 'PRECISE_REQUEST',
+  CANCELLED: 'CANCELLED',
+  CONFUSING_ADDRESS: 'CONFUSING_ADDRESS',
+  SLOW_RESPONSE: 'SLOW_RESPONSE',
+};
+
 module.exports = {
   AuthProvider,
+  CustomerReviewTag,
   NotificationType,
   ProfessionalStatus,
+  ReviewerRole,
   ReviewStatus,
+  ServiceNeedStatus,
+  ServiceNeedVisibility,
+  ServiceRequestCloseReason,
+  ServiceRequestOrigin,
   ServiceRequestSort,
   ServiceRequestStatus,
   UserRole,

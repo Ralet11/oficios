@@ -9,6 +9,18 @@ const registerSchema = z.object({
   phone: z.string().min(6).optional(),
 });
 
+const startPhoneAuthSchema = z.object({
+  phone: z.string().min(8).max(24),
+});
+
+const verifyPhoneAuthSchema = z.object({
+  phone: z.string().min(8).max(24),
+  code: z.string().regex(/^\d{6}$/),
+  firstName: z.string().min(2).optional(),
+  lastName: z.string().min(2).optional(),
+  email: z.string().email().optional(),
+});
+
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -42,6 +54,8 @@ module.exports = {
   activateProfessionalRoleSchema,
   loginSchema,
   registerSchema,
+  startPhoneAuthSchema,
   sessionResponseSchema,
   socialLoginSchema,
+  verifyPhoneAuthSchema,
 };

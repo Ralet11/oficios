@@ -77,6 +77,12 @@ const api = {
   register(body) {
     return request('/auth/register', { method: 'POST', body });
   },
+  startPhoneAuth(body) {
+    return request('/auth/phone/start', { method: 'POST', body });
+  },
+  verifyPhoneAuth(body) {
+    return request('/auth/phone/verify', { method: 'POST', body });
+  },
   socialLogin(body) {
     return request('/auth/social', { method: 'POST', body });
   },
@@ -85,6 +91,9 @@ const api = {
   },
   logout(token) {
     return request('/auth/logout', { method: 'POST', token });
+  },
+  customerProfile(token) {
+    return request('/me/customer-profile', { token });
   },
   activateProfessionalRole(body, token) {
     return request('/auth/roles/professional', { method: 'POST', token, body });
@@ -118,6 +127,27 @@ const api = {
   },
   submitProfessionalProfile(token) {
     return request('/professionals/me/submit', { method: 'POST', token });
+  },
+  serviceNeeds(query, token) {
+    return request(`/service-needs${buildQuery(query)}`, { token });
+  },
+  serviceNeed(id, token) {
+    return request(`/service-needs/${id}`, { token });
+  },
+  createServiceNeed(body, token) {
+    return request('/service-needs', { method: 'POST', token, body });
+  },
+  updateServiceNeed(id, body, token) {
+    return request(`/service-needs/${id}`, { method: 'PATCH', token, body });
+  },
+  dispatchServiceNeed(id, body, token) {
+    return request(`/service-needs/${id}/dispatches`, { method: 'POST', token, body });
+  },
+  selectServiceNeedRequest(id, body, token) {
+    return request(`/service-needs/${id}/select-request`, { method: 'POST', token, body });
+  },
+  cancelServiceNeed(id, token) {
+    return request(`/service-needs/${id}/cancel`, { method: 'POST', token });
   },
   serviceRequests(query, token) {
     return request(`/service-requests${buildQuery(query)}`, { token });
@@ -175,6 +205,12 @@ const api = {
   },
   updateCategory(id, body, token) {
     return request(`/admin/categories/${id}`, { method: 'PATCH', token, body });
+  },
+  myCustomerProfile(token) {
+    return request('/me/customer-profile', { token });
+  },
+  saveCustomerProfile(body, token) {
+    return request('/me/customer-profile', { method: 'PATCH', token, body });
   },
 };
 

@@ -2,14 +2,14 @@ const AUTH_PROVIDERS = [
   {
     key: 'google',
     provider: 'GOOGLE',
-    label: 'Continue with Google',
+    label: 'Continuar con Google',
     icon: 'logo-google',
     variant: 'secondary',
   },
   {
     key: 'apple',
     provider: 'APPLE',
-    label: 'Continue with Apple',
+    label: 'Continuar con Apple',
     icon: 'logo-apple',
     variant: 'ghost',
   },

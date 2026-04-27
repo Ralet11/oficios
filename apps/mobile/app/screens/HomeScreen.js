@@ -14,6 +14,7 @@ const {
   View,
 } = require('react-native');
 const { Ionicons } = require('@expo/vector-icons');
+const { LinearGradient } = require('expo-linear-gradient');
 const { SafeAreaView } = require('react-native-safe-area-context');
 const { Screen } = require('../components/Screen');
 const { AppButton } = require('../components/AppButton');
@@ -345,6 +346,8 @@ function HomeScreen({ navigation }) {
     featuredProfessional?.categories?.[0]?.icon ||
     featuredArtworkTheme.icon;
   const featuredArtworkColors = activeCategory ? spotlightCard.colors : featuredArtworkTheme.colors;
+  const availabilityIcon = filters.availableNow ? 'flash' : 'time-outline';
+  const availabilityLabel = filters.availableNow ? 'Ahora' : 'Cualquier horario';
   const screenScale = searchOverlayProgress.interpolate({
     inputRange: [0, 1],
     outputRange: [1, 0.985],
@@ -459,39 +462,8 @@ function HomeScreen({ navigation }) {
             </View>
           </Pressable>
 
-          <View style={styles.inlineFilterRow}>
-            <Pressable onPress={handleToggleAvailability} style={[styles.liveChip, filters.availableNow && styles.liveChipActive]}>
-              <Ionicons
-                name={filters.availableNow ? 'flash' : 'time-outline'}
-                size={14}
-                color={filters.availableNow ? palette.white : palette.accentDark}
-              />
-              <Text style={[styles.liveChipText, filters.availableNow && styles.liveChipTextActive]}>
-                {filters.availableNow ? 'Available now' : 'Any schedule'}
-              </Text>
-            </Pressable>
-            {hasActiveFilters ? (
-              <Pressable onPress={handleClearFilters}>
-                <Text style={styles.clearText}>Clear</Text>
-              </Pressable>
-            ) : null}
-          </View>
-
-          <View style={styles.spotlightShell}>
-            <ServiceArtwork
-              size="header"
-              icon={spotlightCard.icon}
-              colors={spotlightCard.colors}
-              badge={spotlightCard.badge}
-              style={styles.offerCard}
-              title={spotlightCard.title}
-              subtitle={spotlightCard.subtitle}
-            />
-          </View>
-
           <View style={styles.sectionRow}>
-            <Text style={styles.sectionTitle}>Service Category</Text>
-            <Text style={styles.sectionLink}>{activeCategory?.name || 'All Service'}</Text>
+            <Text style={styles.sectionTitle}>Categorías</Text>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryRail}>
@@ -499,7 +471,7 @@ function HomeScreen({ navigation }) {
               <View style={[styles.categoryIconWrap, !filters.categoryId && styles.categoryIconWrapActive]}>
                 <Ionicons name="apps-outline" size={20} color={!filters.categoryId ? palette.white : palette.accentDark} />
               </View>
-              <Text style={styles.categoryName}>All Service</Text>
+              <Text style={styles.categoryName}>Todos</Text>
             </Pressable>
 
             {categories.map((category, index) => {
@@ -520,6 +492,51 @@ function HomeScreen({ navigation }) {
             })}
           </ScrollView>
 
+          <LinearGradient colors={spotlightCard.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.categoryBanner}>
+            <View pointerEvents="none" style={styles.categoryBannerOrbPrimary} />
+            <View pointerEvents="none" style={styles.categoryBannerOrbSecondary} />
+
+            <View style={styles.categoryBannerTopRow}>
+              <Text style={styles.categoryBannerEyebrow}>{spotlightCard.badge}</Text>
+              <Pressable
+                onPress={handleToggleAvailability}
+                style={[styles.categoryBannerToggle, filters.availableNow && styles.categoryBannerToggleActive]}
+              >
+                <Ionicons
+                  name={availabilityIcon}
+                  size={13}
+                  color={filters.availableNow ? palette.accentDark : palette.white}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.categoryBannerToggleText,
+                    filters.availableNow && styles.categoryBannerToggleTextActive,
+                  ]}
+                >
+                  {availabilityLabel}
+                </Text>
+              </Pressable>
+            </View>
+
+            <View style={styles.categoryBannerBottomRow}>
+              <View style={styles.categoryBannerCopy}>
+                <Text numberOfLines={1} style={styles.categoryBannerTitle}>
+                  {spotlightCard.title}
+                </Text>
+                <Text numberOfLines={1} style={styles.categoryBannerSubtitle}>
+                  {spotlightCard.subtitle}
+                </Text>
+              </View>
+
+              {hasActiveFilters ? (
+                <Pressable hitSlop={8} onPress={handleClearFilters} style={styles.categoryBannerClear}>
+                  <Text style={styles.categoryBannerClearText}>Limpiar</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          </LinearGradient>
+
           {featuredProfessional ? (
             <Pressable
               onPress={() => navigation.navigate('ProfessionalDetail', { professionalId: featuredProfessional.id })}
@@ -530,7 +547,7 @@ function HomeScreen({ navigation }) {
                   size="banner"
                   icon={featuredArtworkIcon}
                   colors={featuredArtworkColors}
-                  badge={featuredCategoryName ? `${featuredCategoryName} recomendado` : 'Recommended'}
+                  badge={featuredCategoryName ? `${featuredCategoryName} recomendado` : 'Recomendado'}
                   style={styles.featuredArtwork}
                 />
 
@@ -553,12 +570,12 @@ function HomeScreen({ navigation }) {
                   </View>
 
                   <Text numberOfLines={2} style={styles.featuredDescription}>
-                    {featuredProfessional.headline || 'Reliable service with clear communication and fast response.'}
+                    {featuredProfessional.headline || 'Servicio confiable con comunicación clara y respuesta rápida.'}
                   </Text>
 
                   <View style={styles.featuredFooter}>
                     <Text style={styles.featuredPrice}>{formatPriceHint(featuredProfessional)}</Text>
-                    <Text style={styles.featuredAction}>View Detail</Text>
+                    <Text style={styles.featuredAction}>Ver perfil</Text>
                   </View>
                 </View>
               </View>
@@ -569,8 +586,8 @@ function HomeScreen({ navigation }) {
 
           {gridProfessionals.length ? (
             <View style={styles.sectionRow}>
-              <Text style={styles.sectionTitle}>Service Found ({rankedProfessionals.length})</Text>
-              <Text style={styles.sectionLink}>See All</Text>
+              <Text style={styles.sectionTitle}>Profesionales ({rankedProfessionals.length})</Text>
+              <Text style={styles.sectionLink}>Ver todos</Text>
             </View>
           ) : null}
 
@@ -660,7 +677,7 @@ function HomeScreen({ navigation }) {
             loading={fetching}
             icon="refresh-outline"
           >
-            Refresh Catalog
+            Actualizar catálogo
           </AppButton>
         </Screen>
       </Animated.View>
@@ -895,6 +912,22 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
+  root: {
+    flex: 1,
+    backgroundColor: palette.white,
+  },
+  screenLayer: {
+    flex: 1,
+  },
+  content: {
+    gap: spacing.lg,
+    paddingBottom: 144,
+  },
+  topRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   userBlock: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -971,36 +1004,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: palette.accent,
   },
-  inlineFilterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  liveChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: palette.accentSoft,
-  },
-  liveChipActive: {
-    backgroundColor: palette.accent,
-  },
-  liveChipText: {
-    color: palette.accentDark,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  liveChipTextActive: {
-    color: palette.white,
-  },
-  clearText: {
-    color: palette.muted,
-    fontSize: 13,
-    fontWeight: '700',
-  },
   sectionRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1016,11 +1019,98 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '700',
   },
-  offerCard: {
-    minHeight: 116,
-  },
-  spotlightShell: {
+  categoryBanner: {
     borderRadius: 24,
+    overflow: 'hidden',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    gap: 10,
+  },
+  categoryBannerOrbPrimary: {
+    position: 'absolute',
+    width: 120,
+    height: 120,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    top: -44,
+    left: -18,
+  },
+  categoryBannerOrbSecondary: {
+    position: 'absolute',
+    width: 92,
+    height: 92,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    right: -10,
+    bottom: -28,
+  },
+  categoryBannerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  categoryBannerEyebrow: {
+    flex: 1,
+    color: palette.whiteSoft,
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  categoryBannerToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    maxWidth: 168,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  categoryBannerToggleActive: {
+    backgroundColor: palette.white,
+    borderColor: palette.white,
+  },
+  categoryBannerToggleText: {
+    flexShrink: 1,
+    color: palette.white,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  categoryBannerToggleTextActive: {
+    color: palette.accentDark,
+  },
+  categoryBannerBottomRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  categoryBannerCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  categoryBannerTitle: {
+    color: palette.white,
+    fontSize: 19,
+    fontWeight: '800',
+  },
+  categoryBannerSubtitle: {
+    color: palette.whiteSoft,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '500',
+  },
+  categoryBannerClear: {
+    paddingVertical: 4,
+  },
+  categoryBannerClearText: {
+    color: palette.white,
+    fontSize: 12,
+    fontWeight: '700',
   },
   categoryRail: {
     gap: 14,

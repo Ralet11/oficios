@@ -21,6 +21,7 @@ const listServiceRequestsSchema = paginationSchema.extend({
   status: z
     .enum([
       ServiceRequestStatus.PENDING,
+      ServiceRequestStatus.AWAITING_PRO_CONFIRMATION,
       ServiceRequestStatus.ACCEPTED,
       ServiceRequestStatus.REJECTED,
       ServiceRequestStatus.CANCELLED,

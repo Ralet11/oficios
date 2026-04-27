@@ -9,13 +9,34 @@ function normalize(status) {
   return status;
 }
 
+const STATUS_LABELS = {
+  DRAFT: 'Borrador',
+  OPEN: 'Abierto',
+  SELECTION_PENDING_CONFIRMATION: 'Esperando confirmacion',
+  MATCHED: 'Elegido',
+  CLOSED: 'Cerrado',
+  CANCELLED: 'Cancelado',
+  PENDING: 'Pendiente',
+  AWAITING_PRO_CONFIRMATION: 'Esperando al profesional',
+  ACCEPTED: 'Aceptado',
+  REJECTED: 'Rechazado',
+  COMPLETED: 'Completado',
+  EXPIRED: 'Vencido',
+  APPROVED: 'Aprobado',
+  PENDING_APPROVAL: 'Pendiente',
+  PAUSED: 'Pausado',
+  VISIBLE: 'Visible',
+  HIDDEN: 'Oculto',
+};
+
 function StatusBadge({ status }) {
   const key = normalize(status);
   const stylesForStatus = statusStyles[key] || statusStyles.DRAFT;
+  const label = STATUS_LABELS[key] || String(status).replace(/_/g, ' ');
 
   return (
     <View style={[styles.badge, { backgroundColor: stylesForStatus.backgroundColor }]}>
-      <Text style={[styles.text, { color: stylesForStatus.color }]}>{String(status).replace(/_/g, ' ')}</Text>
+      <Text style={[styles.text, { color: stylesForStatus.color }]}>{label}</Text>
     </View>
   );
 }

@@ -74,7 +74,7 @@ function ServiceArtwork({
         <View style={styles.figureBubble} />
         <View style={styles.figureAccent} />
         <View style={styles.iconWrap}>
-          <Ionicons name={icon} size={metrics.icon} color={palette.warning} />
+          <Ionicons name={icon} size={metrics.icon} color={palette.white} />
         </View>
       </View>
     </LinearGradient>
@@ -164,14 +164,14 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
   },
   figureAccent: {
     position: 'absolute',
     width: '70%',
     height: '70%',
     borderRadius: 999,
-    backgroundColor: 'rgba(255, 208, 91, 0.24)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   iconWrap: {
     width: '62%',
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: palette.ink,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
   },
 });
 

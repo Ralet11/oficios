@@ -1,6 +1,7 @@
 const React = require('react');
-const { Alert, ImageBackground, Pressable, StyleSheet, Text, View } = require('react-native');
-const { Ionicons } = require('@expo/vector-icons');
+const { Alert, Pressable, StyleSheet, Text, View } = require('react-native');
+const { LinearGradient } = require('expo-linear-gradient');
+const { Ionicons, MaterialCommunityIcons } = require('@expo/vector-icons');
 const { Screen } = require('../components/Screen');
 const { AppButton } = require('../components/AppButton');
 const { AppInput } = require('../components/AppInput');
@@ -8,20 +9,39 @@ const { AUTH_PROVIDERS } = require('../config/authProviders');
 const { useAuth } = require('../contexts/AuthContext');
 const { palette, shadows, spacing } = require('../theme');
 
-const LOGIN_HERO_IMAGE = null;
+const FLOATING_ICONS = [
+  { icon: 'pipe-wrench', top: 18, left: 22, size: 20, opacity: 0.55 },
+  { icon: 'lightning-bolt', top: 44, right: 28, size: 18, opacity: 0.45 },
+  { icon: 'paint-roller', bottom: 32, left: 44, size: 16, opacity: 0.4 },
+  { icon: 'leaf', bottom: 18, right: 18, size: 22, opacity: 0.5 },
+  { icon: 'hammer', top: 72, left: 100, size: 15, opacity: 0.35 },
+];
+
+function deriveDemoIdentity(provider, email) {
+  const fallbackEmail = `${provider.toLowerCase()}.demo@oficios.app`;
+  const resolvedEmail = (email || fallbackEmail).trim().toLowerCase();
+  const [firstName = 'Usuario', lastName = 'Demo'] = resolvedEmail.split('@')[0].split(/[._-]+/);
+
+  return {
+    providerUserId: `${provider.toLowerCase()}-${resolvedEmail}`,
+    email: resolvedEmail,
+    firstName,
+    lastName,
+  };
+}
 
 function LoginScreen({ navigation }) {
   const { signIn, signInWithProvider } = useAuth();
   const [loading, setLoading] = React.useState(false);
-  const [email, setEmail] = React.useState('cliente@oficios.app');
-  const [password, setPassword] = React.useState('Cliente1234');
+  const [email, setEmail] = React.useState('');
+  const [password, setPassword] = React.useState('');
 
   async function handleLogin() {
     try {
       setLoading(true);
       await signIn({ email, password });
     } catch (error) {
-      Alert.alert('No se pudo iniciar sesion', error.message);
+      Alert.alert('No se pudo iniciar sesión', error.message);
     } finally {
       setLoading(false);
     }
@@ -30,16 +50,17 @@ function LoginScreen({ navigation }) {
   async function handleDemoSocial(provider) {
     try {
       setLoading(true);
-      const [firstName = 'Usuario', lastName = 'Demo'] = email.split('@')[0].split('.');
+      const identity = deriveDemoIdentity(provider, email);
+
       await signInWithProvider({
         provider,
-        providerUserId: `${provider.toLowerCase()}-${email.toLowerCase()}`,
-        email,
-        firstName,
-        lastName,
+        providerUserId: identity.providerUserId,
+        email: identity.email,
+        firstName: identity.firstName,
+        lastName: identity.lastName,
       });
     } catch (error) {
-      Alert.alert('No se pudo iniciar sesion social', error.message);
+      Alert.alert('No se pudo iniciar sesión social', error.message);
     } finally {
       setLoading(false);
     }
@@ -56,64 +77,68 @@ function LoginScreen({ navigation }) {
         </Pressable>
       </View>
 
-      {LOGIN_HERO_IMAGE ? (
-        <ImageBackground source={LOGIN_HERO_IMAGE} imageStyle={styles.heroImage} style={styles.heroPanel}>
-          <View style={styles.heroOverlay}>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>Sign In</Text>
-            </View>
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroTitle}>Welcome back</Text>
-              <Text style={styles.heroSubtitle}>
-                Manage bookings, messages and trusted professionals from one place.
-              </Text>
-            </View>
+      <LinearGradient
+        colors={[palette.accentDeep, '#1258B0', palette.accent]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.heroPanel}
+      >
+        <View style={styles.heroOrbLarge} />
+        <View style={styles.heroOrbSmall} />
+
+        {FLOATING_ICONS.map((item, index) => (
+          <View
+            key={index}
+            pointerEvents="none"
+            style={[
+              styles.floatingIconWrap,
+              {
+                top: item.top,
+                left: item.left,
+                right: item.right,
+                bottom: item.bottom,
+                opacity: item.opacity,
+              },
+            ]}
+          >
+            <MaterialCommunityIcons name={item.icon} size={item.size} color={palette.white} />
           </View>
-        </ImageBackground>
-      ) : (
-        <View style={styles.heroPanel}>
-          <View style={styles.heroOverlay}>
-            <View style={styles.heroBadge}>
-              <Text style={styles.heroBadgeText}>Image Slot</Text>
-            </View>
-            <View style={styles.heroCopy}>
-              <Text style={styles.heroTitle}>IMAGEN</Text>
-              
-            </View>
-          </View>
+        ))}
+
+        <View style={styles.heroBadge}>
+          <Ionicons name="flash-outline" size={14} color={palette.white} style={{ opacity: 0.9 }} />
+          <Text style={styles.heroBadgeText}>Ingreso rápido</Text>
         </View>
-      )}
+
+        <View style={styles.heroCopy}>
+          <View style={styles.heroLogoRow}>
+            <View style={styles.heroLogo}>
+              <Text style={styles.heroLogoText}>O</Text>
+            </View>
+            <Text style={styles.heroLogoName}>Oficios</Text>
+          </View>
+          <Text style={styles.heroTitle}>Volvé cuando quieras</Text>
+          <Text style={styles.heroSubtitle}>
+            Entrá con teléfono, con tu proveedor o con email si ya venías usando contraseña.
+          </Text>
+        </View>
+      </LinearGradient>
 
       <View style={[styles.formCard, shadows.card]}>
         <View style={styles.formHeader}>
-          <Text style={styles.formTitle}>Sign In</Text>
-          <Text style={styles.formCopy}>Accede a tu cuenta y retoma tus pedidos, mensajes y profesionales favoritos.</Text>
+          <Text style={styles.formTitle}>Iniciar sesión</Text>
+          <Text style={styles.formCopy}>
+            Priorizamos métodos rápidos y dejamos email con contraseña como respaldo.
+          </Text>
         </View>
 
-        <AppInput
-          label="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          leftIcon="mail-outline"
-        />
-        <AppInput
-          label="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          leftIcon="lock-closed-outline"
-          rightIcon="eye-outline"
-        />
-
-        <AppButton onPress={handleLogin} loading={loading}>
-          Sign In
+        <AppButton onPress={() => navigation.navigate('PhoneAuth', { mode: 'login' })}>
+          Continuar con teléfono
         </AppButton>
 
         <View style={styles.dividerRow}>
           <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or continue with</Text>
+          <Text style={styles.dividerText}>o continuar con</Text>
           <View style={styles.dividerLine} />
         </View>
 
@@ -129,16 +154,47 @@ function LoginScreen({ navigation }) {
           </AppButton>
         ))}
 
+        <View style={styles.dividerRow}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>o usar email y contraseña</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <AppInput
+          label="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          leftIcon="mail-outline"
+          placeholder="cliente@oficios.app"
+        />
+        <AppInput
+          label="Contraseña"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry
+          leftIcon="lock-closed-outline"
+          rightIcon="eye-outline"
+          placeholder="Tu contraseña"
+        />
+
+        <AppButton onPress={handleLogin} loading={loading} variant="secondary">
+          Entrar con email
+        </AppButton>
+
         <View style={styles.seedBox}>
-          <Text style={styles.seedTitle}>Quick Access</Text>
+          <Text style={styles.seedTitle}>Acceso rápido demo</Text>
           <Text style={styles.seedText}>Admin: admin@oficios.app / Admin1234</Text>
-          <Text style={styles.seedText}>Customer: cliente@oficios.app / Cliente1234</Text>
-          <Text style={styles.seedText}>Professional: pro@oficios.app / Profesional1234</Text>
+          <Text style={styles.seedText}>Cliente: cliente@oficios.app / Cliente1234</Text>
+          <Text style={styles.seedText}>Pro: pro@oficios.app / Profesional1234</Text>
         </View>
       </View>
 
       <Pressable onPress={() => navigation.navigate('Register')} style={styles.footerLink}>
-        <Text style={styles.footerText}>Don't have an account? Sign Up</Text>
+        <Text style={styles.footerText}>
+          ¿No tenés cuenta? <Text style={styles.footerAccent}>Crear cuenta</Text>
+        </Text>
       </Pressable>
     </Screen>
   );
@@ -154,7 +210,7 @@ const styles = StyleSheet.create({
     width: 260,
     height: 260,
     borderRadius: 999,
-    backgroundColor: 'rgba(87, 190, 180, 0.16)',
+    backgroundColor: 'rgba(87, 190, 180, 0.1)',
     top: -70,
     right: -90,
   },
@@ -163,7 +219,7 @@ const styles = StyleSheet.create({
     width: 220,
     height: 220,
     borderRadius: 999,
-    backgroundColor: 'rgba(57, 169, 255, 0.12)',
+    backgroundColor: 'rgba(57, 169, 255, 0.08)',
     bottom: 100,
     left: -80,
   },
@@ -182,24 +238,39 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 255, 255, 0.55)',
   },
   heroPanel: {
-    minHeight: 258,
-    marginBottom: -72,
+    minHeight: 252,
+    marginBottom: -68,
     borderRadius: 32,
     overflow: 'hidden',
-    backgroundColor: '#0C2A2C',
-    justifyContent: 'flex-end',
-  },
-  heroImage: {
-    resizeMode: 'cover',
-  },
-  heroOverlay: {
-    flex: 1,
     justifyContent: 'space-between',
     padding: 22,
-    backgroundColor: 'rgba(8, 18, 24, 0.26)',
+  },
+  heroOrbLarge: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    top: -80,
+    right: -60,
+  },
+  heroOrbSmall: {
+    position: 'absolute',
+    width: 140,
+    height: 140,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    bottom: -40,
+    left: -30,
+  },
+  floatingIconWrap: {
+    position: 'absolute',
   },
   heroBadge: {
     alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
@@ -215,7 +286,31 @@ const styles = StyleSheet.create({
   },
   heroCopy: {
     gap: 8,
-    maxWidth: '72%',
+  },
+  heroLogoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 4,
+  },
+  heroLogo: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroLogoText: {
+    color: palette.white,
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  heroLogoName: {
+    color: palette.white,
+    fontSize: 16,
+    fontWeight: '800',
+    opacity: 0.9,
   },
   heroTitle: {
     color: palette.white,
@@ -224,14 +319,14 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   heroSubtitle: {
-    color: 'rgba(255, 255, 255, 0.82)',
+    color: 'rgba(255, 255, 255, 0.78)',
     fontSize: 14,
     lineHeight: 20,
     fontWeight: '500',
   },
   formCard: {
     zIndex: 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    backgroundColor: 'rgba(255, 255, 255, 0.96)',
     borderRadius: 28,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.72)',
@@ -276,10 +371,11 @@ const styles = StyleSheet.create({
     color: palette.ink,
     fontSize: 14,
     fontWeight: '800',
+    marginBottom: 2,
   },
   seedText: {
     color: palette.muted,
-    fontSize: 13,
+    fontSize: 12,
     lineHeight: 18,
   },
   footerLink: {
@@ -287,12 +383,14 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   footerText: {
-    color: palette.accentDark,
+    color: palette.muted,
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '600',
+  },
+  footerAccent: {
+    color: palette.accentDark,
+    fontWeight: '800',
   },
 });
 
-module.exports = {
-  LoginScreen,
-};
+module.exports = { LoginScreen };

@@ -3,8 +3,14 @@ const {
   AuthProvider,
   ProfessionalStatus,
   ReviewStatus,
+  ReviewerRole,
+  ServiceNeedStatus,
+  ServiceNeedVisibility,
+  ServiceRequestCloseReason,
+  ServiceRequestOrigin,
   ServiceRequestStatus,
 } = require('@oficios/domain');
+const CustomerProfile = require('./customer-profile');
 
 function initModels(sequelize) {
   const commonOptions = {
@@ -54,6 +60,28 @@ function initModels(sequelize) {
       ipAddress: { type: DataTypes.STRING, allowNull: true },
     },
     commonOptions,
+  );
+
+  const AuthVerificationCode = sequelize.define(
+    'AuthVerificationCode',
+    {
+      provider: {
+        type: DataTypes.ENUM(...Object.values(AuthProvider)),
+        allowNull: false,
+      },
+      targetValue: { type: DataTypes.STRING, allowNull: false },
+      codeHash: { type: DataTypes.STRING, allowNull: false },
+      expiresAt: { type: DataTypes.DATE, allowNull: false },
+      consumedAt: { type: DataTypes.DATE, allowNull: true },
+      attempts: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    },
+    {
+      ...commonOptions,
+      indexes: [
+        { fields: ['provider', 'target_value'] },
+        { fields: ['expires_at'] },
+      ],
+    },
   );
 
   const ProfessionalProfile = sequelize.define(
@@ -128,9 +156,56 @@ function initModels(sequelize) {
     commonOptions,
   );
 
+  const ServiceNeed = sequelize.define(
+    'ServiceNeed',
+    {
+      title: { type: DataTypes.STRING, allowNull: true },
+      description: { type: DataTypes.TEXT, allowNull: true },
+      photoUrls: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      preferredDate: { type: DataTypes.DATE, allowNull: true },
+      city: { type: DataTypes.STRING, allowNull: true },
+      province: { type: DataTypes.STRING, allowNull: true },
+      addressLine: { type: DataTypes.STRING, allowNull: true },
+      placeId: { type: DataTypes.STRING, allowNull: true },
+      lat: { type: DataTypes.FLOAT, allowNull: true },
+      lng: { type: DataTypes.FLOAT, allowNull: true },
+      budgetAmount: { type: DataTypes.FLOAT, allowNull: true },
+      budgetCurrency: { type: DataTypes.STRING, allowNull: false, defaultValue: 'ARS' },
+      contactName: { type: DataTypes.STRING, allowNull: true },
+      contactPhone: { type: DataTypes.STRING, allowNull: true },
+      contactWhatsapp: { type: DataTypes.STRING, allowNull: true },
+      contactEmail: { type: DataTypes.STRING, allowNull: true },
+      visibility: {
+        type: DataTypes.ENUM(...Object.values(ServiceNeedVisibility)),
+        allowNull: false,
+        defaultValue: ServiceNeedVisibility.DIRECT_ONLY,
+      },
+      status: {
+        type: DataTypes.ENUM(...Object.values(ServiceNeedStatus)),
+        allowNull: false,
+        defaultValue: ServiceNeedStatus.DRAFT,
+      },
+      selectedServiceRequestId: { type: DataTypes.INTEGER, allowNull: true },
+      publishedAt: { type: DataTypes.DATE, allowNull: true },
+      selectionStartedAt: { type: DataTypes.DATE, allowNull: true },
+      matchedAt: { type: DataTypes.DATE, allowNull: true },
+      closedAt: { type: DataTypes.DATE, allowNull: true },
+      cancelledAt: { type: DataTypes.DATE, allowNull: true },
+    },
+    commonOptions,
+  );
+
   const ServiceRequest = sequelize.define(
     'ServiceRequest',
     {
+      origin: {
+        type: DataTypes.ENUM(...Object.values(ServiceRequestOrigin)),
+        allowNull: true,
+      },
+      closeReason: {
+        type: DataTypes.ENUM(...Object.values(ServiceRequestCloseReason)),
+        allowNull: true,
+      },
       status: {
         type: DataTypes.ENUM(...Object.values(ServiceRequestStatus)),
         allowNull: false,
@@ -175,6 +250,11 @@ function initModels(sequelize) {
         allowNull: false,
         defaultValue: ReviewStatus.VISIBLE,
       },
+      reviewerRole: {
+        type: DataTypes.ENUM(...Object.values(ReviewerRole)),
+        allowNull: false,
+        defaultValue: ReviewerRole.CUSTOMER,
+      },
     },
     {
       ...commonOptions,
@@ -214,6 +294,10 @@ function initModels(sequelize) {
   User.hasOne(ProfessionalProfile, { as: 'professionalProfile', foreignKey: 'userId' });
   ProfessionalProfile.belongsTo(User, { as: 'user', foreignKey: 'userId' });
 
+  const CustomerProfileModel = CustomerProfile(sequelize);
+  User.hasOne(CustomerProfileModel, { as: 'customerProfile', foreignKey: 'userId' });
+  CustomerProfileModel.belongsTo(User, { as: 'user', foreignKey: 'userId' });
+
   ProfessionalProfile.belongsToMany(Category, {
     through: ProfessionalCategory,
     as: 'categories',
@@ -231,6 +315,12 @@ function initModels(sequelize) {
   ProfessionalProfile.hasMany(ProfessionalWorkPost, { as: 'workPosts', foreignKey: 'professionalProfileId' });
   ProfessionalWorkPost.belongsTo(ProfessionalProfile, { as: 'professionalProfile', foreignKey: 'professionalProfileId' });
 
+  User.hasMany(ServiceNeed, { as: 'serviceNeeds', foreignKey: 'customerId' });
+  ServiceNeed.belongsTo(User, { as: 'customer', foreignKey: 'customerId' });
+
+  Category.hasMany(ServiceNeed, { as: 'serviceNeeds', foreignKey: 'categoryId' });
+  ServiceNeed.belongsTo(Category, { as: 'category', foreignKey: 'categoryId' });
+
   User.hasMany(ServiceRequest, { as: 'customerRequests', foreignKey: 'customerId' });
   ServiceRequest.belongsTo(User, { as: 'customer', foreignKey: 'customerId' });
 
@@ -239,6 +329,9 @@ function initModels(sequelize) {
 
   Category.hasMany(ServiceRequest, { as: 'serviceRequests', foreignKey: 'categoryId' });
   ServiceRequest.belongsTo(Category, { as: 'category', foreignKey: 'categoryId' });
+
+  ServiceNeed.hasMany(ServiceRequest, { as: 'requests', foreignKey: 'serviceNeedId' });
+  ServiceRequest.belongsTo(ServiceNeed, { as: 'serviceNeed', foreignKey: 'serviceNeedId' });
 
   ServiceRequest.hasMany(ServiceRequestMessage, { as: 'messages', foreignKey: 'serviceRequestId' });
   ServiceRequestMessage.belongsTo(ServiceRequest, { as: 'serviceRequest', foreignKey: 'serviceRequestId' });
@@ -260,13 +353,16 @@ function initModels(sequelize) {
   return {
     AdminActionLog,
     AuthIdentity,
+    AuthVerificationCode,
     Category,
+    CustomerProfile: CustomerProfileModel,
     Notification,
     ProfessionalCategory,
     ProfessionalProfile,
     ProfessionalWorkPost,
     Review,
     ServiceArea,
+    ServiceNeed,
     ServiceRequest,
     ServiceRequestMessage,
     Session,

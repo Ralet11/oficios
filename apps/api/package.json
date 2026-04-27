@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "node src/server.js",
-    "db:seed": "node src/seeders/seed.js"
+    "db:seed": "node src/seeders/seed.js",
+    "db:migrate": "node src/db/migrate.js"
   },
   "dependencies": {
     "@oficios/config": "1.0.0",

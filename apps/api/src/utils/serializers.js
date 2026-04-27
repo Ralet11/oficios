@@ -11,6 +11,20 @@ function serializeUser(user) {
   };
 }
 
+function serializeCategory(category) {
+  if (!category) {
+    return null;
+  }
+
+  return {
+    id: category.id,
+    name: category.name,
+    slug: category.slug,
+    description: category.description,
+    icon: category.icon,
+  };
+}
+
 function serializeProfessional(profile, options = {}) {
   const includeContact = options.includeContact === true;
   const workPosts = [...(profile.workPosts || [])].sort((left, right) => {
@@ -43,13 +57,7 @@ function serializeProfessional(profile, options = {}) {
     coverUrl: profile.coverUrl,
     photoUrls: profile.photoUrls || [],
     user: profile.user ? serializeUser(profile.user) : undefined,
-    categories: profile.categories?.map((category) => ({
-      id: category.id,
-      name: category.name,
-      slug: category.slug,
-      description: category.description,
-      icon: category.icon,
-    })),
+    categories: profile.categories?.map((category) => serializeCategory(category)),
     serviceAreas: profile.serviceAreas?.map((area) => ({
       id: area.id,
       city: area.city,
@@ -79,13 +87,88 @@ function serializeProfessional(profile, options = {}) {
   };
 }
 
-function serializeServiceRequest(serviceRequest, viewerUserId) {
+function buildServiceNeedRequestCounts(requests = []) {
+  return requests.reduce(
+    (counts, request) => {
+      if (request?.status) {
+        counts[request.status] = (counts[request.status] || 0) + 1;
+      }
+
+      counts.total += 1;
+      return counts;
+    },
+    { total: 0 },
+  );
+}
+
+function serializeServiceNeedReference(serviceNeed) {
+  if (!serviceNeed) {
+    return null;
+  }
+
+  return {
+    id: serviceNeed.id,
+    status: serviceNeed.status,
+    visibility: serviceNeed.visibility,
+    title: serviceNeed.title,
+    selectedServiceRequestId: serviceNeed.selectedServiceRequestId,
+  };
+}
+
+function serializeServiceNeedSummary(serviceNeed, options = {}) {
+  if (!serviceNeed) {
+    return null;
+  }
+
+  const includeContact = options.includeContact === true;
+
+  return {
+    id: serviceNeed.id,
+    status: serviceNeed.status,
+    visibility: serviceNeed.visibility,
+    title: serviceNeed.title,
+    description: serviceNeed.description,
+    photoUrls: serviceNeed.photoUrls || [],
+    city: serviceNeed.city,
+    province: serviceNeed.province,
+    addressLine: serviceNeed.addressLine,
+    placeId: serviceNeed.placeId,
+    lat: serviceNeed.lat,
+    lng: serviceNeed.lng,
+    preferredDate: serviceNeed.preferredDate,
+    budgetAmount: serviceNeed.budgetAmount,
+    budgetCurrency: serviceNeed.budgetCurrency,
+    contact:
+      includeContact
+        ? {
+            name: serviceNeed.contactName,
+            phone: serviceNeed.contactPhone,
+            whatsapp: serviceNeed.contactWhatsapp,
+            email: serviceNeed.contactEmail,
+          }
+        : null,
+    selectedServiceRequestId: serviceNeed.selectedServiceRequestId,
+    publishedAt: serviceNeed.publishedAt,
+    selectionStartedAt: serviceNeed.selectionStartedAt,
+    matchedAt: serviceNeed.matchedAt,
+    closedAt: serviceNeed.closedAt,
+    cancelledAt: serviceNeed.cancelledAt,
+    category: serializeCategory(serviceNeed.category),
+    requestCounts: buildServiceNeedRequestCounts(serviceNeed.requests || []),
+    createdAt: serviceNeed.createdAt,
+    updatedAt: serviceNeed.updatedAt,
+  };
+}
+
+function serializeServiceRequest(serviceRequest, viewerUserId, options = {}) {
   const showContact =
     canRevealContact(serviceRequest.status) &&
     [serviceRequest.customerId, serviceRequest.professional?.userId].includes(viewerUserId);
 
   return {
     id: serviceRequest.id,
+    origin: serviceRequest.origin || null,
+    closeReason: serviceRequest.closeReason || null,
     status: serviceRequest.status,
     title: serviceRequest.title,
     customerMessage: serviceRequest.customerMessage,
@@ -103,17 +186,14 @@ function serializeServiceRequest(serviceRequest, viewerUserId) {
     cancelledAt: serviceRequest.cancelledAt,
     completedAt: serviceRequest.completedAt,
     contactUnlockedAt: serviceRequest.contactUnlockedAt,
-    category: serviceRequest.category
-      ? {
-          id: serviceRequest.category.id,
-          name: serviceRequest.category.name,
-          slug: serviceRequest.category.slug,
-        }
-      : null,
+    createdAt: serviceRequest.createdAt,
+    updatedAt: serviceRequest.updatedAt,
+    category: serializeCategory(serviceRequest.category),
     customer: serviceRequest.customer ? serializeUser(serviceRequest.customer) : null,
     professional: serviceRequest.professional
       ? serializeProfessional(serviceRequest.professional, { includeContact: showContact })
       : null,
+    serviceNeed: options.omitServiceNeed ? null : serializeServiceNeedReference(serviceRequest.serviceNeed),
     messages:
       serviceRequest.messages?.map((message) => ({
         id: message.id,
@@ -133,8 +213,26 @@ function serializeServiceRequest(serviceRequest, viewerUserId) {
   };
 }
 
+function serializeServiceNeedDetail(serviceNeed, viewerUserId, options = {}) {
+  if (!serviceNeed) {
+    return null;
+  }
+
+  const resolvedViewerUserId = viewerUserId || serviceNeed.customerId;
+  const includeContact = options.includeContact === true;
+
+  return {
+    ...serializeServiceNeedSummary(serviceNeed, { includeContact }),
+    customer: serviceNeed.customer ? serializeUser(serviceNeed.customer) : null,
+    requests:
+      serviceNeed.requests?.map((request) => serializeServiceRequest(request, resolvedViewerUserId, { omitServiceNeed: true })) || [],
+  };
+}
+
 module.exports = {
   serializeProfessional,
+  serializeServiceNeedDetail,
+  serializeServiceNeedSummary,
   serializeServiceRequest,
   serializeUser,
 };

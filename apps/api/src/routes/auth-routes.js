@@ -5,6 +5,8 @@ const {
   loginSchema,
   registerSchema,
   socialLoginSchema,
+  startPhoneAuthSchema,
+  verifyPhoneAuthSchema,
 } = require('@oficios/contracts');
 const controller = require('../controllers/auth-controller');
 const { requireAuth } = require('../middlewares/auth');
@@ -14,6 +16,8 @@ const { asyncHandler } = require('../utils/async-handler');
 const router = express.Router();
 
 router.post('/register', validate({ body: registerSchema }), asyncHandler(controller.register));
+router.post('/phone/start', validate({ body: startPhoneAuthSchema }), asyncHandler(controller.startPhoneAuth));
+router.post('/phone/verify', validate({ body: verifyPhoneAuthSchema }), asyncHandler(controller.verifyPhoneAuth));
 router.post('/login', validate({ body: loginSchema }), asyncHandler(controller.login));
 router.post('/social', validate({ body: socialLoginSchema }), asyncHandler(controller.socialLogin));
 router.get('/me', requireAuth, asyncHandler(controller.me));

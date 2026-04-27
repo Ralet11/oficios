@@ -26,10 +26,17 @@ function sanitizeFileName(fileName, mimeType) {
 }
 
 function buildUploadPath(scope, user) {
-  const profileSegment = slugifySegment(user.professionalProfile?.id || user.id);
-  const scopeSegment = slugifySegment(scope);
+  if (scope === 'professional-work-post') {
+    const profileSegment = slugifySegment(user.professionalProfile?.id || user.id);
+    return ['professionals', profileSegment, 'work-posts'].join('/');
+  }
 
-  return ['professionals', profileSegment, scopeSegment].join('/');
+  if (scope === 'service-need') {
+    const customerSegment = slugifySegment(user.id);
+    return ['customers', customerSegment, 'service-needs'].join('/');
+  }
+
+  throw new AppError('Unsupported upload scope', 400);
 }
 
 function signCloudinaryParams(params) {

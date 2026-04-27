@@ -36,29 +36,46 @@ function formatBudget(detail) {
 }
 
 function buildTimeline(detail) {
+  const isSelectedThread =
+    detail.serviceNeed?.selectedServiceRequestId && detail.serviceNeed.selectedServiceRequestId === detail.id;
+  const waitingConfirmation =
+    detail.status === 'AWAITING_PRO_CONFIRMATION' ||
+    (detail.status === 'PENDING' &&
+      detail.serviceNeed?.status === 'SELECTION_PENDING_CONFIRMATION' &&
+      isSelectedThread);
   const accepted = ['ACCEPTED', 'COMPLETED'].includes(detail.status);
   const completed = detail.status === 'COMPLETED';
 
   return [
     {
-      title: 'Service Ordered',
+      title: 'Consulta creada',
       description: detail.category?.name || 'Solicitud creada',
       active: true,
     },
     {
-      title: 'Professional Response',
-      description: accepted ? 'Aceptada por el profesional' : 'Pendiente de respuesta',
+      title: 'Conversacion abierta',
+      description: detail.messages?.length ? 'Ya hubo intercambio en el hilo' : 'Pendiente de primer intercambio',
+      active: Boolean(detail.messages?.length),
+    },
+    {
+      title: 'Seleccion del cliente',
+      description: waitingConfirmation || accepted ? 'Este hilo fue elegido por el cliente' : 'Todavia no fue elegido',
+      active: waitingConfirmation || accepted,
+    },
+    {
+      title: 'Confirmacion del profesional',
+      description: accepted ? 'Confirmado y listo para coordinar' : waitingConfirmation ? 'Esperando confirmacion' : 'Pendiente',
       active: accepted,
     },
     {
-      title: 'Cleaning Process',
+      title: 'Trabajo cerrado',
       description: completed ? 'Trabajo marcado como completado' : 'En seguimiento',
       active: completed,
     },
   ];
 }
 
-function RequestDetailScreen() {
+function RequestDetailScreen({ navigation }) {
   const route = useRoute();
   const { token, user } = useAuth();
   const requestId = route.params.requestId;
@@ -147,6 +164,19 @@ function RequestDetailScreen() {
   const canReview = isCustomer && !detail.review && ['ACCEPTED', 'COMPLETED'].includes(detail.status);
   const location = [detail.city, detail.province].filter(Boolean).join(', ') || 'Argentina';
   const timeline = buildTimeline(detail);
+  const isSelectedThread = detail.serviceNeed?.selectedServiceRequestId === detail.id;
+  const canConfirmSelectedThread =
+    isProfessional &&
+    (
+      detail.status === 'AWAITING_PRO_CONFIRMATION' ||
+      (detail.status === 'PENDING' &&
+        (
+          !detail.serviceNeed ||
+          (detail.serviceNeed?.status === 'SELECTION_PENDING_CONFIRMATION' && isSelectedThread)
+        ))
+    );
+  const canRejectThread = isProfessional && ['PENDING', 'AWAITING_PRO_CONFIRMATION'].includes(detail.status);
+  const canCancelStandaloneRequest = isCustomer && detail.status === 'PENDING' && !detail.serviceNeed;
 
   return (
     <Screen contentStyle={styles.content}>
@@ -162,6 +192,27 @@ function RequestDetailScreen() {
         <StatusBadge status={detail.status} />
         <Text style={styles.headerCopy}>{detail.customerMessage}</Text>
       </View>
+
+      {detail.serviceNeed ? (
+        <Pressable
+          onPress={() => navigation.navigate('ServiceNeedDetail', { serviceNeedId: detail.serviceNeed.id })}
+          style={styles.parentCard}
+        >
+          <View style={styles.parentTopRow}>
+            <View style={styles.parentHeaderCopy}>
+              <Text style={styles.parentEyebrow}>Problema padre</Text>
+              <Text numberOfLines={1} style={styles.parentTitle}>
+                {detail.serviceNeed.title || 'Problema sin titulo'}
+              </Text>
+            </View>
+            <Ionicons color={palette.accentDark} name="arrow-forward" size={18} />
+          </View>
+          <View style={styles.parentBottomRow}>
+            <StatusBadge status={detail.serviceNeed.status} />
+            {isSelectedThread ? <Text style={styles.parentSelectionCopy}>Hilo elegido</Text> : null}
+          </View>
+        </Pressable>
+      ) : null}
 
       <View style={styles.summaryCard}>
         <View style={styles.summaryTabs}>
@@ -254,24 +305,29 @@ function RequestDetailScreen() {
       </SectionCard>
 
       <SectionCard title="Actions">
-        {isProfessional && detail.status === 'PENDING' ? (
+        {canConfirmSelectedThread ? (
           <View style={styles.actionList}>
             <AppButton onPress={() => changeStatus('ACCEPTED')} loading={submitting}>
-              Accept Request
+              {detail.status === 'AWAITING_PRO_CONFIRMATION' || detail.serviceNeed ? 'Confirmar trabajo' : 'Aceptar solicitud'}
             </AppButton>
             <AppButton onPress={() => changeStatus('REJECTED')} variant="secondary" loading={submitting}>
-              Reject
+              Rechazar
             </AppButton>
           </View>
         ) : null}
-        {isCustomer && detail.status === 'PENDING' ? (
+        {!canConfirmSelectedThread && canRejectThread ? (
+          <AppButton onPress={() => changeStatus('REJECTED')} variant="secondary" loading={submitting}>
+            Rechazar
+          </AppButton>
+        ) : null}
+        {canCancelStandaloneRequest ? (
           <AppButton onPress={() => changeStatus('CANCELLED')} variant="secondary" loading={submitting}>
-            Cancel Request
+            Cancelar solicitud
           </AppButton>
         ) : null}
         {detail.status === 'ACCEPTED' ? (
           <AppButton onPress={() => changeStatus('COMPLETED')} variant="ghost" loading={submitting}>
-            Mark as Completed
+            Marcar como completado
           </AppButton>
         ) : null}
         {!isCustomer && !isProfessional ? <EmptyState title="No actions" message="No participas de esta solicitud." /> : null}
@@ -324,6 +380,45 @@ const styles = StyleSheet.create({
     color: palette.muted,
     fontSize: 14,
     lineHeight: 21,
+  },
+  parentCard: {
+    borderRadius: 22,
+    backgroundColor: palette.accentSoft,
+    padding: 16,
+    gap: 12,
+  },
+  parentTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  parentHeaderCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  parentEyebrow: {
+    color: palette.accentDark,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
+  parentTitle: {
+    color: palette.ink,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  parentBottomRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 10,
+  },
+  parentSelectionCopy: {
+    color: palette.accentDark,
+    fontSize: 12,
+    fontWeight: '800',
   },
   summaryCard: {
     backgroundColor: palette.surface,

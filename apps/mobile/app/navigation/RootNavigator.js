@@ -20,6 +20,8 @@ const { RequestDetailScreen } = require('../screens/RequestDetailScreen');
 const { ServiceNeedComposerScreen } = require('../screens/ServiceNeedComposerScreen');
 const { ServiceNeedDetailScreen } = require('../screens/ServiceNeedDetailScreen');
 const { SelectProfessionalsScreen } = require('../screens/SelectProfessionalsScreen');
+const { OpportunitiesBoardScreen } = require('../screens/OpportunitiesBoardScreen');
+const { OpportunityDetailScreen } = require('../screens/OpportunityDetailScreen');
 const { ProfessionalHubScreen } = require('../screens/ProfessionalHubScreen');
 const { AdminDashboardScreen } = require('../screens/AdminDashboardScreen');
 const { AccountScreen } = require('../screens/AccountScreen');
@@ -165,6 +167,8 @@ function AppNavigator() {
       <Stack.Screen name="ServiceNeedComposer" component={ServiceNeedComposerScreen} options={{ title: 'Nuevo problema' }} />
       <Stack.Screen name="ServiceNeedDetail" component={ServiceNeedDetailScreen} options={{ title: 'Mi problema' }} />
       <Stack.Screen name="SelectProfessionals" component={SelectProfessionalsScreen} options={{ title: 'Elegir profesionales' }} />
+      <Stack.Screen name="OpportunitiesBoard" component={OpportunitiesBoardScreen} options={{ title: 'Tablero' }} />
+      <Stack.Screen name="OpportunityDetail" component={OpportunityDetailScreen} options={{ title: 'Oportunidad' }} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ title: 'Notificaciones' }} />
       <Stack.Screen name="EditCustomerProfile" component={EditCustomerProfileScreen} options={{ title: 'Editar perfil', presentation: 'modal' }} />
       <Stack.Screen name="Help" component={HelpScreen} options={{ title: 'Ayuda' }} />

@@ -19,6 +19,7 @@ const apiEnvSchema = z.object({
   S3_SECRET_ACCESS_KEY: z.string().optional(),
   S3_PUBLIC_BASE_URL: z.string().url().optional(),
   S3_UPLOAD_PREFIX: z.string().default('oficios'),
+  SELECTION_TIMEOUT_HOURS: z.coerce.number().positive().default(24),
 });
 
 const mobileEnvSchema = z.object({

@@ -526,11 +526,345 @@ async function cancelServiceNeed(req, res) {
   });
 }
 
+async function listOpportunityNeeds(req, res) {
+  const filters = req.validated.query;
+  const page = filters.page || 1;
+  const pageSize = filters.pageSize || 10;
+  const where = {
+    visibility: ServiceNeedVisibility.PUBLIC_BOARD,
+    status: ServiceNeedStatus.OPEN,
+  };
+
+  if (filters.categoryId) {
+    where.categoryId = filters.categoryId;
+  }
+
+  if (filters.placeId) {
+    where.placeId = filters.placeId;
+  }
+
+  if (filters.text) {
+    where[Op.or] = [
+      { title: { [Op.iLike]: `%${filters.text}%` } },
+      { description: { [Op.iLike]: `%${filters.text}%` } },
+    ];
+  }
+
+  const { rows, count } = await req.models.ServiceNeed.findAndCountAll({
+    where,
+    include: [{ model: req.models.Category, as: 'category' }],
+    distinct: true,
+    order: [['publishedAt', 'DESC']],
+    offset: (page - 1) * pageSize,
+    limit: pageSize,
+  });
+
+  res.json({
+    data: rows.map((item) => serializeServiceNeedSummary(item, { includeContact: false })),
+    pagination: {
+      page,
+      pageSize,
+      total: count,
+      totalPages: Math.max(1, Math.ceil(count / pageSize)),
+    },
+  });
+}
+
+async function getOpportunityNeed(req, res) {
+  const serviceNeed = await req.models.ServiceNeed.findByPk(req.params.id, {
+    include: [{ model: req.models.Category, as: 'category' }],
+  });
+
+  if (!serviceNeed || serviceNeed.visibility !== ServiceNeedVisibility.PUBLIC_BOARD) {
+    throw new AppError('Opportunity not found', 404);
+  }
+
+  res.json({
+    data: serializeServiceNeedDetail(serviceNeed, null, { includeContact: false }),
+  });
+}
+
+async function expressInterest(req, res) {
+  const serviceNeed = await req.models.ServiceNeed.findByPk(req.params.id, {
+    include: [{ model: req.models.ServiceRequest, as: 'requests' }],
+  });
+
+  if (!serviceNeed || serviceNeed.visibility !== ServiceNeedVisibility.PUBLIC_BOARD) {
+    throw new AppError('Opportunity not found', 404);
+  }
+
+  if (serviceNeed.status !== ServiceNeedStatus.OPEN) {
+    throw new AppError('This opportunity is no longer open', 422);
+  }
+
+  const user = await req.models.User.findByPk(req.auth.user.id, {
+    include: [{ model: req.models.ProfessionalProfile, as: 'professionalProfile' }],
+  });
+
+  if (!user.roles.includes('PROFESSIONAL')) {
+    throw new AppError('Only professionals can express interest', 403);
+  }
+
+  const professionalId = user.professionalProfile?.id;
+  if (!professionalId) {
+    throw new AppError('Professional profile not found', 404);
+  }
+
+  const existingRequest = serviceNeed.requests.find(
+    (r) => r.professionalId === professionalId && ACTIVE_SERVICE_REQUEST_STATUSES.includes(r.status)
+  );
+
+  if (existingRequest) {
+    throw new AppError('You have already expressed interest in this opportunity', 409);
+  }
+
+  const transaction = await req.models.ServiceNeed.sequelize.transaction();
+
+  try {
+    const serviceRequest = await req.models.ServiceRequest.create(
+      {
+        serviceNeedId: serviceNeed.id,
+        customerId: serviceNeed.customerId,
+        professionalId,
+        categoryId: serviceNeed.categoryId,
+        origin: ServiceRequestOrigin.PUBLIC_BOARD,
+        status: ServiceRequestStatus.PENDING,
+        title: serviceNeed.title,
+        customerMessage: req.validated.body.message || null,
+        city: serviceNeed.city,
+        province: serviceNeed.province,
+        addressLine: serviceNeed.addressLine,
+        placeId: serviceNeed.placeId,
+        preferredDate: serviceNeed.preferredDate,
+        budgetAmount: serviceNeed.budgetAmount,
+        budgetCurrency: serviceNeed.budgetCurrency,
+        lat: serviceNeed.lat,
+        lng: serviceNeed.lng,
+      },
+      { transaction }
+    );
+
+    if (req.validated.body.message) {
+      await req.models.ServiceRequestMessage.create(
+        {
+          serviceRequestId: serviceRequest.id,
+          senderUserId: req.auth.user.id,
+          body: req.validated.body.message,
+          isSystemMessage: false,
+        },
+        { transaction }
+      );
+    }
+
+    await transaction.commit();
+
+    await createNotification(req.models, {
+      userId: serviceNeed.customerId,
+      type: NotificationType.SERVICE_REQUEST_CREATED,
+      title: 'Nuevo interés en tu consulta pública',
+      body: `Un profesional está interesado en tu consulta: ${serviceNeed.title}`,
+      payload: { serviceRequestId: serviceRequest.id, serviceNeedId: serviceNeed.id },
+    });
+
+    res.status(201).json({
+      data: serviceRequest,
+    });
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+}
+
+async function closeBoard(req, res) {
+  const serviceNeed = await req.models.ServiceNeed.findByPk(req.params.id);
+  if (!serviceNeed) {
+    throw new AppError('Service need not found', 404);
+  }
+
+  if (serviceNeed.customerId !== req.auth.user.id && !req.auth.user.roles.includes('ADMIN')) {
+    throw new AppError('Unauthorized', 403);
+  }
+
+  if (serviceNeed.visibility !== ServiceNeedVisibility.PUBLIC_BOARD) {
+    throw new AppError('This is not a public board post', 422);
+  }
+
+  const now = new Date();
+  const transaction = await req.models.ServiceNeed.sequelize.transaction();
+
+  try {
+    await serviceNeed.update(
+      {
+        status: ServiceNeedStatus.CLOSED,
+        closedAt: now,
+      },
+      { transaction }
+    );
+
+    await req.models.ServiceRequest.update(
+      {
+        status: ServiceRequestStatus.CANCELLED,
+        closeReason: ServiceRequestCloseReason.BOARD_CLOSED,
+        cancelledAt: now,
+      },
+      {
+        where: {
+          serviceNeedId: serviceNeed.id,
+          status: ACTIVE_SERVICE_REQUEST_STATUSES,
+        },
+        transaction,
+      }
+    );
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+
+  res.json({
+    data: serializeServiceNeedDetail(await loadServiceNeed(req, serviceNeed.id), req.auth.user.id, {
+      includeContact: false,
+    }),
+  });
+}
+
+async function expireSelection(req, res) {
+  const serviceNeed = await loadServiceNeed(req, req.params.id, { includeRequests: true });
+  
+  if (!serviceNeed) {
+    throw new AppError('Service need not found', 404);
+  }
+
+  // Permitir que el dueño o un admin expiren la selección
+  if (serviceNeed.customerId !== req.auth.user.id && !req.auth.user.roles.includes('ADMIN')) {
+    throw new AppError('Unauthorized', 403);
+  }
+
+  if (serviceNeed.status !== ServiceNeedStatus.SELECTION_PENDING_CONFIRMATION) {
+    throw new AppError('This service need is not awaiting professional confirmation', 422);
+  }
+
+  const now = new Date();
+  const transaction = await req.models.ServiceNeed.sequelize.transaction();
+
+  try {
+    // 1. Expirar el ServiceRequest elegido
+    await req.models.ServiceRequest.update(
+      {
+        status: ServiceRequestStatus.EXPIRED,
+        closeReason: ServiceRequestCloseReason.PROFESSIONAL_REJECTED, // Rejected by timeout
+        cancelledAt: now,
+      },
+      {
+        where: { id: serviceNeed.selectedServiceRequestId },
+        transaction,
+      }
+    );
+
+    // 2. Volver el ServiceNeed a OPEN
+    await req.models.ServiceNeed.update(
+      {
+        status: ServiceNeedStatus.OPEN,
+        selectedServiceRequestId: null,
+        selectionStartedAt: null,
+      },
+      {
+        where: { id: serviceNeed.id },
+        transaction,
+      }
+    );
+
+    // 3. Notificar al cliente
+    await createNotification(req.models, {
+      userId: serviceNeed.customerId,
+      type: NotificationType.SERVICE_REQUEST_UPDATED,
+      title: 'Selección expirada',
+      body: `La selección para "${serviceNeed.title}" ha expirado. El profesional no confirmó a tiempo.`,
+      payload: { serviceNeedId: serviceNeed.id },
+    });
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+
+  res.json({
+    data: serializeServiceNeedDetail(await loadServiceNeed(req, serviceNeed.id), req.auth.user.id, {
+      includeContact: false,
+    }),
+  });
+}
+
+async function expireOldSelections(models) {
+  const timeoutHours = Number(process.env.SELECTION_TIMEOUT_HOURS) || 24; // Configurable via ENV
+  const cutoffTime = new Date(Date.now() - timeoutHours * 60 * 60 * 1000);
+
+  const expiredNeeds = await models.ServiceNeed.findAll({
+    where: {
+      status: ServiceNeedStatus.SELECTION_PENDING_CONFIRMATION,
+      selectionStartedAt: { [Op.lt]: cutoffTime },
+    },
+    include: [{ model: models.ServiceRequest, as: 'requests' }],
+  });
+
+  for (const need of expiredNeeds) {
+    const now = new Date();
+    const transaction = await models.ServiceNeed.sequelize.transaction();
+    try {
+      if (need.selectedServiceRequestId) {
+        await models.ServiceRequest.update(
+          {
+            status: ServiceRequestStatus.EXPIRED,
+            closeReason: ServiceRequestCloseReason.PROFESSIONAL_REJECTED,
+            cancelledAt: now,
+          },
+          {
+            where: { id: need.selectedServiceRequestId },
+            transaction,
+          }
+        );
+      }
+
+      await need.update(
+        {
+          status: ServiceNeedStatus.OPEN,
+          selectedServiceRequestId: null,
+          selectionStartedAt: null,
+        },
+        { transaction }
+      );
+
+      await createNotification(models, {
+        userId: need.customerId,
+        type: NotificationType.SERVICE_REQUEST_UPDATED,
+        title: 'Selección expirada automáticamente',
+        body: `La selección para "${need.title}" ha expirado por tiempo. Ya podés elegir otro profesional.`,
+        payload: { serviceNeedId: need.id },
+      });
+
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      console.error('Error expiring selection for need:', need.id, error);
+    }
+  }
+
+  return expiredNeeds.length;
+}
+
 module.exports = {
   cancelServiceNeed,
+  closeBoard,
   createServiceNeed,
   dispatchServiceNeed,
+  expireOldSelections,
+  expireSelection,
+  expressInterest,
+  getOpportunityNeed,
   getServiceNeed,
+  listOpportunityNeeds,
   listServiceNeeds,
   selectServiceNeedRequest,
   updateServiceNeed,

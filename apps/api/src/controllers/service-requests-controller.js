@@ -168,8 +168,8 @@ async function createServiceRequest(req, res) {
         lat: payload.lat,
         lng: payload.lng,
         customerId: req.auth.user.id,
-        status: ServiceNeedStatus.SELECTION_PENDING_CONFIRMATION,
-        selectionStartedAt: now,
+        status: ServiceNeedStatus.OPEN,
+        visibility: 'DIRECT_ONLY',
         publishedAt: now,
       },
       { transaction },
@@ -184,13 +184,6 @@ async function createServiceRequest(req, res) {
         serviceNeedId: serviceNeed.id,
         origin: ServiceRequestOrigin.DIRECT_INVITE,
         status: ServiceRequestStatus.PENDING,
-      },
-      { transaction },
-    );
-
-    await serviceNeed.update(
-      {
-        selectedServiceRequestId: serviceRequest.id,
       },
       { transaction },
     );

@@ -1,6 +1,6 @@
 const React = require('react');
 const { Alert, Image, Pressable, ScrollView, StyleSheet, Switch, Text, View } = require('react-native');
-const { useFocusEffect } = require('@react-navigation/native');
+const { useFocusEffect, useNavigation } = require('@react-navigation/native');
 const { LinearGradient } = require('expo-linear-gradient');
 const { Ionicons } = require('@expo/vector-icons');
 const { hasRole } = require('@oficios/domain');
@@ -83,6 +83,7 @@ function ProfessionalHubScreen() {
   const [composerVisible, setComposerVisible] = React.useState(false);
   const [composerIndex, setComposerIndex] = React.useState(null);
   const isProfessional = hasRole(user, 'PROFESSIONAL');
+  const navigation = useNavigation();
 
   const hydrate = React.useCallback(async () => {
     try {
@@ -341,6 +342,20 @@ function ProfessionalHubScreen() {
           <Text style={styles.stateText}>Guarda los cambios y luego envia el perfil a moderacion.</Text>
           {rejectionReason ? <Text style={styles.rejection}>{rejectionReason}</Text> : null}
         </SectionCard>
+
+        {profileStatus === 'APPROVED' ? (
+          <SectionCard title="Oportunidades de trabajo">
+            <View style={styles.opportunitiesCard}>
+              <Ionicons name="briefcase-outline" size={32} color={palette.accent} />
+              <Text style={styles.opportunitiesText}>
+                Explora necesidades publicadas por clientes y expresá tu interés para conseguir nuevos trabajos.
+              </Text>
+              <AppButton onPress={() => navigation.navigate('OpportunitiesBoard')}>
+                Ver Tablero de Oportunidades
+              </AppButton>
+            </View>
+          </SectionCard>
+        ) : null}
 
         <SectionCard title="Ficha profesional">
           <AppInput label="Nombre comercial" onChangeText={(value) => updateField('businessName', value)} value={form.businessName} />
@@ -731,8 +746,19 @@ const styles = StyleSheet.create({
     backgroundColor: palette.surfaceElevated,
     padding: 18,
   },
-  emptyStudioButton: {
+   emptyStudioButton: {
     alignSelf: 'flex-start',
+  },
+  opportunitiesCard: {
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 8,
+  },
+  opportunitiesText: {
+    fontSize: 14,
+    color: palette.muted,
+    textAlign: 'center',
+    lineHeight: 20,
   },
 });
 

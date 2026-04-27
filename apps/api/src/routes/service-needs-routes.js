@@ -5,6 +5,8 @@ const {
   listServiceNeedsSchema,
   selectServiceNeedRequestSchema,
   updateServiceNeedSchema,
+  listOpportunityNeedsSchema,
+  expressInterestSchema,
 } = require('@oficios/contracts');
 const controller = require('../controllers/service-needs-controller');
 const { requireAuth } = require('../middlewares/auth');
@@ -29,5 +31,12 @@ router.post(
   asyncHandler(controller.selectServiceNeedRequest),
 );
 router.post('/:id/cancel', asyncHandler(controller.cancelServiceNeed));
+
+// Opportunities board routes
+router.get('/opportunities', validate({ query: listOpportunityNeedsSchema }), asyncHandler(controller.listOpportunityNeeds));
+router.get('/opportunities/:id', asyncHandler(controller.getOpportunityNeed));
+router.post('/:id/express-interest', validate({ body: expressInterestSchema }), asyncHandler(controller.expressInterest));
+router.post('/:id/close-board', asyncHandler(controller.closeBoard));
+router.post('/:id/expire-selection', asyncHandler(controller.expireSelection));
 
 module.exports = router;

@@ -48,6 +48,39 @@ function countActiveThreads(detail) {
     .reduce((total, value) => total + value, 0);
 }
 
+function normalizeText(value) {
+  return String(value || '').trim();
+}
+
+function buildDispatchValidationMessage(detail) {
+  const missingFields = [];
+
+  if (!detail?.category?.id) {
+    missingFields.push('categoria');
+  }
+  if (!normalizeText(detail?.title)) {
+    missingFields.push('titulo');
+  }
+  if (!normalizeText(detail?.description)) {
+    missingFields.push('descripcion');
+  }
+  if (!normalizeText(detail?.city)) {
+    missingFields.push('ciudad');
+  }
+  if (!normalizeText(detail?.province)) {
+    missingFields.push('provincia');
+  }
+  if (!normalizeText(detail?.addressLine)) {
+    missingFields.push('direccion');
+  }
+
+  if (!missingFields.length) {
+    return null;
+  }
+
+  return `Antes de enviarlo o publicarlo completa: ${missingFields.join(', ')}.`;
+}
+
 function ServiceNeedDetailScreen({ navigation }) {
   const route = useRoute();
   const { token } = useAuth();
@@ -97,6 +130,36 @@ function ServiceNeedDetailScreen({ navigation }) {
     );
   }
 
+  async function handlePublishToBoard() {
+    const validationMessage = buildDispatchValidationMessage(detail);
+    if (validationMessage) {
+      Alert.alert('Completa el problema', validationMessage);
+      return;
+    }
+
+    Alert.alert(
+      'Publicar en tablero general',
+      'Tu problema sera visible para todos los profesionales en el tablero de oportunidades.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Publicar',
+          async onPress() {
+            try {
+              setSubmitting(true);
+              await api.publishServiceNeed(serviceNeedId, token);
+              await load();
+            } catch (error) {
+              Alert.alert('No se pudo publicar el problema', error.message);
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ],
+    );
+  }
+
   async function handleCancelNeed() {
     Alert.alert('Cancelar problema', 'Se cerraran las conversaciones activas de este problema.', [
       { text: 'Volver', style: 'cancel' },
@@ -118,6 +181,16 @@ function ServiceNeedDetailScreen({ navigation }) {
     ]);
   }
 
+  function handleOpenSelectProfessionals() {
+    const validationMessage = buildDispatchValidationMessage(detail);
+    if (validationMessage) {
+      Alert.alert('Completa el problema', validationMessage);
+      return;
+    }
+
+    navigation.navigate('SelectProfessionals', { serviceNeedId: detail.id });
+  }
+
   if (loading) {
     return <LoadingView label="Cargando problema..." />;
   }
@@ -133,6 +206,7 @@ function ServiceNeedDetailScreen({ navigation }) {
   const activeThreads = countActiveThreads(detail);
   const canEdit = detail.status === 'DRAFT' || (detail.status === 'OPEN' && activeThreads === 0);
   const canInvite = ['DRAFT', 'OPEN'].includes(detail.status);
+  const canPublish = ['DRAFT', 'OPEN'].includes(detail.status) && detail.visibility === 'DIRECT_ONLY';
   const waitingForPro = detail.status === 'SELECTION_PENDING_CONFIRMATION';
   const heroIcon = getCategoryIcon(detail.category, 0);
 
@@ -220,8 +294,13 @@ function ServiceNeedDetailScreen({ navigation }) {
           </AppButton>
         ) : null}
         {canInvite ? (
-          <AppButton onPress={() => navigation.navigate('SelectProfessionals', { serviceNeedId: detail.id })}>
-            Seleccionar profesionales
+          <AppButton onPress={handleOpenSelectProfessionals}>
+            {detail.requests?.length ? 'Enviar a otros profesionales' : 'Seleccionar profesionales'}
+          </AppButton>
+        ) : null}
+        {canPublish ? (
+          <AppButton onPress={handlePublishToBoard} loading={submitting} variant="secondary">
+            {detail.requests?.length ? 'Publicar tambien en tablero general' : 'Publicar en tablero general'}
           </AppButton>
         ) : null}
         {!['CANCELLED', 'CLOSED'].includes(detail.status) ? (

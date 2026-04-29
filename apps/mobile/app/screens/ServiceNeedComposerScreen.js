@@ -14,6 +14,7 @@ const { Screen } = require('../components/Screen');
 const { AppButton } = require('../components/AppButton');
 const { AppInput } = require('../components/AppInput');
 const { EmptyState } = require('../components/EmptyState');
+const { LocationPickerField } = require('../components/LocationPickerField');
 const { LoadingView } = require('../components/LoadingView');
 const { ServiceArtwork } = require('../components/ServiceArtwork');
 const { StatusBadge } = require('../components/StatusBadge');
@@ -32,21 +33,45 @@ function buildPhotoItemFromUrl(url) {
   };
 }
 
-function buildDefaultForm(user, existingNeed) {
+function formatLocation(professional) {
+  return [professional?.city, professional?.province].filter(Boolean).join(', ') || 'Argentina';
+}
+
+function formatRating(professional) {
+  const reviewCount = Number(professional?.reviewCount) || 0;
+  if (!reviewCount) {
+    return 'Nuevo perfil';
+  }
+
+  return `${(Number(professional?.ratingAverage) || 0).toFixed(1)} (${reviewCount})`;
+}
+
+function buildDefaultForm(user, existingNeed, targetProfessional = null) {
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(' ').trim();
 
   return {
     addressLine: existingNeed?.addressLine || '',
     budgetAmount: existingNeed?.budgetAmount ? String(existingNeed.budgetAmount) : '',
     budgetCurrency: existingNeed?.budgetCurrency || 'ARS',
-    categoryId: existingNeed?.category?.id ? String(existingNeed.category.id) : '',
+    categoryId:
+      existingNeed?.category?.id
+        ? String(existingNeed.category.id)
+        : targetProfessional?.categories?.[0]?.id
+          ? String(targetProfessional.categories[0].id)
+          : '',
     city: existingNeed?.city || '',
     contactEmail: existingNeed?.contact?.email || user?.email || '',
     contactName: existingNeed?.contact?.name || fullName || '',
     contactPhone: existingNeed?.contact?.phone || user?.phone || '',
     contactWhatsapp: existingNeed?.contact?.whatsapp || user?.phone || '',
     description: existingNeed?.description || '',
+    lat: typeof existingNeed?.lat === 'number' ? existingNeed.lat : null,
+    lng: typeof existingNeed?.lng === 'number' ? existingNeed.lng : null,
+    locationQuery:
+      existingNeed?.addressLine ||
+      [existingNeed?.city, existingNeed?.province].filter(Boolean).join(', '),
     photoItems: (existingNeed?.photoUrls || []).map((photoUrl) => buildPhotoItemFromUrl(photoUrl)),
+    placeId: existingNeed?.placeId || '',
     province: existingNeed?.province || '',
     title: existingNeed?.title || '',
   };
@@ -54,6 +79,45 @@ function buildDefaultForm(user, existingNeed) {
 
 function normalizeEditableText(value) {
   return String(value || '').trim();
+}
+
+function buildDispatchValidationMessage(source, options = {}) {
+  const missingFields = [];
+  const categoryId = source?.categoryId || source?.category?.id;
+  const title = normalizeEditableText(source?.title);
+  const description = normalizeEditableText(source?.description);
+  const city = normalizeEditableText(source?.city);
+  const province = normalizeEditableText(source?.province);
+  const addressLine = normalizeEditableText(source?.addressLine);
+
+  if (!categoryId) {
+    missingFields.push('categoria');
+  }
+  if (!title) {
+    missingFields.push('titulo');
+  }
+  if (!description) {
+    missingFields.push('descripcion');
+  }
+  if (!city) {
+    missingFields.push('ciudad');
+  }
+  if (!province) {
+    missingFields.push('provincia');
+  }
+  if (!addressLine) {
+    missingFields.push('direccion');
+  }
+
+  if (!missingFields.length) {
+    return null;
+  }
+
+  const prefix = options.savedDraft
+    ? 'Tu borrador quedo guardado, pero antes de enviarlo completa:'
+    : 'Completa estos datos antes de enviarlo:';
+
+  return `${prefix} ${missingFields.join(', ')}.`;
 }
 
 function validateDraft(form) {
@@ -133,6 +197,15 @@ function buildPayload(form) {
     payload.addressLine = addressLine;
   }
 
+  if (normalizeEditableText(form.placeId)) {
+    payload.placeId = normalizeEditableText(form.placeId);
+  }
+
+  if (typeof form.lat === 'number' && typeof form.lng === 'number') {
+    payload.lat = form.lat;
+    payload.lng = form.lng;
+  }
+
   const contactName = normalizeEditableText(form.contactName);
   if (contactName) {
     payload.contactName = contactName;
@@ -170,12 +243,13 @@ function ServiceNeedComposerScreen({ navigation }) {
   const route = useRoute();
   const { token, user } = useAuth();
   const initialServiceNeedId = route.params?.serviceNeedId || null;
+  const targetProfessional = route.params?.targetProfessional || null;
   const [serviceNeedId, setServiceNeedId] = React.useState(initialServiceNeedId);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [categories, setCategories] = React.useState([]);
   const [serviceNeed, setServiceNeed] = React.useState(null);
-  const [form, setForm] = React.useState(() => buildDefaultForm(user, null));
+  const [form, setForm] = React.useState(() => buildDefaultForm(user, null, targetProfessional));
 
   const load = React.useCallback(async () => {
     try {
@@ -189,10 +263,10 @@ function ServiceNeedComposerScreen({ navigation }) {
 
       if (serviceNeedResponse?.data) {
         setServiceNeed(serviceNeedResponse.data);
-        setForm(buildDefaultForm(user, serviceNeedResponse.data));
+        setForm(buildDefaultForm(user, serviceNeedResponse.data, targetProfessional));
       } else {
         setServiceNeed(null);
-        setForm(buildDefaultForm(user, null));
+        setForm(buildDefaultForm(user, null, targetProfessional));
       }
     } catch (error) {
       Alert.alert('No se pudo cargar el borrador', error.message);
@@ -200,7 +274,7 @@ function ServiceNeedComposerScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [navigation, serviceNeedId, token, user]);
+  }, [navigation, serviceNeedId, targetProfessional, token, user]);
 
   React.useEffect(() => {
     load();
@@ -210,6 +284,39 @@ function ServiceNeedComposerScreen({ navigation }) {
     setForm((current) => ({
       ...current,
       [key]: value,
+    }));
+  }
+
+  function updateNeedLocationQuery(value) {
+    setForm((current) => ({
+      ...current,
+      lat: null,
+      lng: null,
+      locationQuery: value,
+      placeId: '',
+    }));
+  }
+
+  function updateLocationTextField(key, value) {
+    setForm((current) => ({
+      ...current,
+      [key]: value,
+      lat: null,
+      lng: null,
+      placeId: '',
+    }));
+  }
+
+  function handleNeedLocationSelected(location) {
+    setForm((current) => ({
+      ...current,
+      addressLine: location.addressLine || current.addressLine,
+      city: location.city || current.city,
+      lat: typeof location.lat === 'number' ? location.lat : null,
+      lng: typeof location.lng === 'number' ? location.lng : null,
+      locationQuery: location.label || current.locationQuery,
+      placeId: location.placeId || '',
+      province: location.province || current.province,
     }));
   }
 
@@ -297,7 +404,7 @@ function ServiceNeedComposerScreen({ navigation }) {
 
       setServiceNeedId(nextNeed.id);
       setServiceNeed(nextNeed);
-      setForm(buildDefaultForm(user, nextNeed));
+      setForm(buildDefaultForm(user, nextNeed, targetProfessional));
 
       if (options.showSuccess !== false) {
         Alert.alert('Borrador guardado', 'Tu problema quedo guardado para seguir despues.');
@@ -331,30 +438,138 @@ function ServiceNeedComposerScreen({ navigation }) {
       return;
     }
 
+    const readinessMessage = buildDispatchValidationMessage(nextNeed, { savedDraft: true });
+    if (readinessMessage) {
+      Alert.alert('Completa el problema', readinessMessage);
+      return;
+    }
+
     navigation.navigate('SelectProfessionals', { serviceNeedId: nextNeed.id });
+  }
+
+  async function handleDirectDispatch() {
+    if (!targetProfessional?.id) {
+      return;
+    }
+
+    const nextNeed = await persistDraft({ showSuccess: false });
+    if (!nextNeed?.id) {
+      return;
+    }
+
+    const readinessMessage = buildDispatchValidationMessage(nextNeed, { savedDraft: true });
+    if (readinessMessage) {
+      Alert.alert('Completa el problema', readinessMessage);
+      return;
+    }
+
+    const existingThread = (nextNeed.requests || []).some((request) => request.professional?.id === targetProfessional.id);
+    if (existingThread) {
+      Alert.alert(
+        'Ya existe una conversacion activa',
+        'Este profesional ya tiene un hilo activo para este problema. Puedes ver el detalle o invitar a otros.',
+      );
+      navigation.replace('ServiceNeedDetail', { serviceNeedId: nextNeed.id });
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await api.dispatchServiceNeed(
+        nextNeed.id,
+        {
+          professionalIds: [targetProfessional.id],
+          customerMessage: normalizeEditableText(nextNeed.description),
+        },
+        token,
+      );
+      navigation.replace('ServiceNeedDetail', { serviceNeedId: nextNeed.id });
+    } catch (error) {
+      Alert.alert('No se pudo enviar la consulta', error.message);
+    } finally {
+      setSaving(false);
+    }
   }
 
   if (loading) {
     return <LoadingView label="Cargando borrador..." />;
   }
 
-  const selectedCategory = categories.find((category) => String(category.id) === String(form.categoryId)) || serviceNeed?.category || null;
+  const selectedCategory =
+    categories.find((category) => String(category.id) === String(form.categoryId)) ||
+    serviceNeed?.category ||
+    targetProfessional?.categories?.[0] ||
+    null;
   const heroIcon = getCategoryIcon(selectedCategory, 0);
+  const targetProfessionalImage =
+    targetProfessional?.avatarUrl || targetProfessional?.photoUrls?.[0] || targetProfessional?.coverUrl || null;
+  const targetAlreadyInvited = Boolean(
+    targetProfessional?.id &&
+      serviceNeed?.requests?.some((request) => request.professional?.id === targetProfessional.id),
+  );
 
   return (
     <Screen contentStyle={styles.content}>
       <ServiceArtwork
         size="banner"
         icon={heroIcon}
-        badge={serviceNeed ? 'Editar problema' : 'Nuevo problema'}
+        badge={targetProfessional ? 'Consulta directa' : serviceNeed ? 'Editar problema' : 'Nuevo problema'}
         title={form.title.trim() || 'Describe tu necesidad'}
-        subtitle={form.city.trim() || 'Guarda un borrador y luego elige a quien enviarlo'}
+        subtitle={
+          targetProfessional
+            ? `Se enviara primero a ${targetProfessional.businessName} y luego podras sumar otros profesionales.`
+            : form.city.trim() || 'Guarda un borrador y luego elige a quien enviarlo'
+        }
       />
 
       {serviceNeed ? (
         <View style={styles.statusRow}>
           <StatusBadge status={serviceNeed.status} />
           <Text style={styles.statusCopy}>El borrador se guarda como espacio padre del problema y luego genera varias conversaciones.</Text>
+        </View>
+      ) : null}
+
+      {targetProfessional ? (
+        <View style={[styles.targetCard, shadows.card]}>
+          {targetProfessionalImage ? (
+            <Image source={{ uri: targetProfessionalImage }} style={styles.targetImage} resizeMode="cover" />
+          ) : (
+            <ServiceArtwork size="thumb" icon={heroIcon} style={styles.targetArtworkFallback} />
+          )}
+
+          <View style={styles.targetBody}>
+            <View style={styles.targetTopRow}>
+              <View style={styles.targetCopy}>
+                <Text numberOfLines={1} style={styles.targetTitle}>
+                  {targetProfessional.businessName}
+                </Text>
+                <Text numberOfLines={2} style={styles.targetSubtitle}>
+                  {targetProfessional.headline || 'Profesional aprobado para recibir consultas.'}
+                </Text>
+              </View>
+              <View style={styles.targetRatingPill}>
+                <Ionicons color={palette.warning} name="star" size={14} />
+                <Text style={styles.targetRatingText}>{formatRating(targetProfessional)}</Text>
+              </View>
+            </View>
+
+            <View style={styles.targetMetaRow}>
+              <View style={styles.targetMetaPill}>
+                <Ionicons color={palette.accentDark} name="location-outline" size={14} />
+                <Text style={styles.targetMetaText}>{formatLocation(targetProfessional)}</Text>
+              </View>
+              <View style={styles.targetMetaPill}>
+                <Ionicons color={palette.accentDark} name="flash-outline" size={14} />
+                <Text style={styles.targetMetaText}>{targetProfessional.availableNow ? 'Disponible ahora' : 'Coordinar horario'}</Text>
+              </View>
+            </View>
+
+            <Text style={styles.targetHint}>
+              {targetAlreadyInvited
+                ? 'Este profesional ya tiene un hilo activo para este problema. Puedes guardar cambios o invitar a otros.'
+                : 'Al enviarlo desde aqui se abrira el primer hilo con este profesional y luego podras sumar otros o publicarlo.'}
+            </Text>
+          </View>
         </View>
       ) : null}
 
@@ -445,24 +660,34 @@ function ServiceNeedComposerScreen({ navigation }) {
           </ScrollView>
         </View>
 
+        <LocationPickerField
+          helperText="Busca la direccion o zona del trabajo para guardar ubicacion real y mejorar la seleccion de profesionales."
+          label="Ubicacion en mapa"
+          latitude={form.lat}
+          longitude={form.lng}
+          onChangeQuery={updateNeedLocationQuery}
+          onSelectLocation={handleNeedLocationSelected}
+          placeholder="Buscar direccion, barrio o ciudad"
+          query={form.locationQuery}
+        />
         <AppInput
           label="Direccion"
           value={form.addressLine}
-          onChangeText={(value) => updateField('addressLine', value)}
+          onChangeText={(value) => updateLocationTextField('addressLine', value)}
           placeholder="Calle, altura y referencia"
           leftIcon="home-outline"
         />
         <AppInput
           label="Ciudad"
           value={form.city}
-          onChangeText={(value) => updateField('city', value)}
+          onChangeText={(value) => updateLocationTextField('city', value)}
           placeholder="Ciudad"
           leftIcon="business-outline"
         />
         <AppInput
           label="Provincia"
           value={form.province}
-          onChangeText={(value) => updateField('province', value)}
+          onChangeText={(value) => updateLocationTextField('province', value)}
           placeholder="Provincia"
           leftIcon="map-outline"
         />
@@ -511,12 +736,31 @@ function ServiceNeedComposerScreen({ navigation }) {
       </View>
 
       <View style={styles.footerActions}>
-        <AppButton onPress={handleSave} loading={saving}>
-          {serviceNeedId ? 'Guardar cambios' : 'Guardar borrador'}
-        </AppButton>
-        <AppButton onPress={handleSelectProfessionals} loading={saving} variant="secondary">
-          Seleccionar profesionales
-        </AppButton>
+        {targetProfessional ? (
+          <AppButton onPress={handleDirectDispatch} loading={saving} disabled={targetAlreadyInvited}>
+            {targetAlreadyInvited
+              ? 'Este profesional ya fue invitado'
+              : `${serviceNeedId ? 'Guardar y enviar a' : 'Crear y enviar a'} ${targetProfessional.businessName}`}
+          </AppButton>
+        ) : (
+          <AppButton onPress={handleSave} loading={saving}>
+            {serviceNeedId ? 'Guardar cambios' : 'Guardar borrador'}
+          </AppButton>
+        )}
+        {targetProfessional ? (
+          <>
+            <AppButton onPress={handleSave} loading={saving} variant="secondary">
+              Guardar borrador
+            </AppButton>
+            <AppButton onPress={handleSelectProfessionals} loading={saving} variant="ghost">
+              {serviceNeed?.requests?.length ? 'Enviar a otros profesionales' : 'Seleccionar profesionales'}
+            </AppButton>
+          </>
+        ) : (
+          <AppButton onPress={handleSelectProfessionals} loading={saving} variant="secondary">
+            {serviceNeed?.requests?.length ? 'Enviar a otros profesionales' : 'Seleccionar profesionales'}
+          </AppButton>
+        )}
         {serviceNeedId ? (
           <AppButton onPress={handleOpenDetail} loading={saving} variant="ghost">
             Ver problema
@@ -537,6 +781,87 @@ const styles = StyleSheet.create({
   },
   statusCopy: {
     ...type.body,
+  },
+  targetCard: {
+    flexDirection: 'row',
+    gap: 12,
+    borderRadius: 24,
+    backgroundColor: palette.surface,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: palette.borderSoft,
+  },
+  targetImage: {
+    width: 104,
+    height: 132,
+    borderRadius: 20,
+    backgroundColor: palette.surfaceMuted,
+  },
+  targetArtworkFallback: {
+    width: 104,
+    minHeight: 132,
+  },
+  targetBody: {
+    flex: 1,
+    gap: 10,
+  },
+  targetTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  targetCopy: {
+    flex: 1,
+    gap: 4,
+  },
+  targetTitle: {
+    color: palette.ink,
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  targetSubtitle: {
+    color: palette.muted,
+    fontSize: 13,
+    lineHeight: 19,
+  },
+  targetRatingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: palette.warningSoft,
+  },
+  targetRatingText: {
+    color: palette.ink,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  targetMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  targetMetaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: palette.surfaceElevated,
+  },
+  targetMetaText: {
+    color: palette.accentDark,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  targetHint: {
+    color: palette.muted,
+    fontSize: 13,
+    lineHeight: 19,
   },
   photoActions: {
     gap: 12,

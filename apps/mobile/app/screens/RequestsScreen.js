@@ -19,6 +19,7 @@ const { ServiceArtwork } = require('../components/ServiceArtwork');
 const { StatusBadge } = require('../components/StatusBadge');
 const { getCategoryIcon } = require('../config/categoryVisuals');
 const { useAuth } = require('../contexts/AuthContext');
+const { APP_MODES } = require('../services/sessionMode');
 const { api } = require('../services/api');
 const { palette, shadows, spacing } = require('../theme');
 
@@ -110,11 +111,12 @@ function buildNeedCountsCopy(serviceNeed) {
 }
 
 function RequestsScreen({ navigation }) {
-  const { token, user } = useAuth();
-  const canSeeNeeds = hasRole(user, 'CUSTOMER');
+  const { token, user, activeMode } = useAuth();
+  const isCustomerMode = activeMode === APP_MODES.CUSTOMER;
+  const isProfessionalMode = activeMode === APP_MODES.PROFESSIONAL;
+  const canSeeNeeds = isCustomerMode && hasRole(user, 'CUSTOMER');
   const [loading, setLoading] = React.useState(true);
   const [searchText, setSearchText] = React.useState('');
-  const [activeView, setActiveView] = React.useState(canSeeNeeds ? 'needs' : 'requests');
   const [requestStatusFilter, setRequestStatusFilter] = React.useState('ALL');
   const [needStatusFilter, setNeedStatusFilter] = React.useState('ALL');
   const [requests, setRequests] = React.useState([]);
@@ -124,7 +126,7 @@ function RequestsScreen({ navigation }) {
     try {
       setLoading(true);
       const responses = await Promise.all([
-        api.serviceRequests({ page: 1, pageSize: 30, scope: 'all' }, token),
+        isProfessionalMode ? api.serviceRequests({ page: 1, pageSize: 30, scope: 'all' }, token) : Promise.resolve({ data: [] }),
         canSeeNeeds ? api.serviceNeeds({ page: 1, pageSize: 30 }, token) : Promise.resolve({ data: [] }),
       ]);
 
@@ -135,7 +137,7 @@ function RequestsScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
-  }, [canSeeNeeds, token]);
+  }, [canSeeNeeds, isProfessionalMode, token]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -182,7 +184,7 @@ function RequestsScreen({ navigation }) {
     return matchesNeedFilter(serviceNeed, needStatusFilter) && haystack.includes(normalizedSearch);
   });
 
-  const showingNeeds = canSeeNeeds && activeView === 'needs';
+  const showingNeeds = canSeeNeeds;
   const activeFilters = showingNeeds ? NEED_FILTERS : REQUEST_FILTERS;
   const selectedFilter = showingNeeds ? needStatusFilter : requestStatusFilter;
 
@@ -194,23 +196,6 @@ function RequestsScreen({ navigation }) {
           <Ionicons name={showingNeeds ? 'construct-outline' : 'chatbubble-ellipses-outline'} size={18} color={palette.ink} />
         </View>
       </View>
-
-      {canSeeNeeds ? (
-        <View style={styles.segmentWrap}>
-          <Pressable
-            onPress={() => setActiveView('needs')}
-            style={[styles.segmentButton, activeView === 'needs' && styles.segmentButtonActive]}
-          >
-            <Text style={[styles.segmentText, activeView === 'needs' && styles.segmentTextActive]}>Mis problemas</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => setActiveView('requests')}
-            style={[styles.segmentButton, activeView === 'requests' && styles.segmentButtonActive]}
-          >
-            <Text style={[styles.segmentText, activeView === 'requests' && styles.segmentTextActive]}>Conversaciones</Text>
-          </Pressable>
-        </View>
-      ) : null}
 
       {showingNeeds ? (
         <AppButton icon="add-circle-outline" onPress={() => navigation.navigate('ServiceNeedComposer')}>
@@ -392,32 +377,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: palette.surfaceElevated,
-  },
-  segmentWrap: {
-    flexDirection: 'row',
-    padding: 4,
-    borderRadius: 18,
-    backgroundColor: palette.surfaceElevated,
-    gap: 4,
-  },
-  segmentButton: {
-    flex: 1,
-    minHeight: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 12,
-  },
-  segmentButtonActive: {
-    backgroundColor: palette.surface,
-  },
-  segmentText: {
-    color: palette.muted,
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  segmentTextActive: {
-    color: palette.accentDark,
   },
   searchShell: {
     minHeight: 56,

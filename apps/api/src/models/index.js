@@ -113,6 +113,9 @@ function initModels(sequelize) {
       avatarUrl: { type: DataTypes.STRING, allowNull: true },
       coverUrl: { type: DataTypes.STRING, allowNull: true },
       photoUrls: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      personalDetails: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
+      certifications: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+      references: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
     },
     commonOptions,
   );

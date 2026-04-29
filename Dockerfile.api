@@ -1,0 +1,59 @@
+FROM node:18-alpine AS base
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies only when needed
+FROM base AS deps
+
+# Copy package files for all workspaces
+COPY package*.json ./
+COPY apps/api/package*.json ./apps/api/
+COPY packages/*/package*.json ./packages/*/
+
+# Copy lockfile if exists
+COPY package-lock.json* ./
+
+# Install all dependencies (resolves npm workspaces)
+RUN npm install
+
+# Rebuild the source code if needed
+FROM base AS builder
+
+WORKDIR /app
+
+COPY --from=deps /app/node_modules ./node_modules
+COPY . .
+
+# Environment variables for build
+ENV NODE_ENV=production
+
+# Production dependencies (prune devDependencies)
+RUN npm prune --production
+
+# Production image, copy all files and run
+FROM base AS runner
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=4000
+
+# Don't run as root user
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nodejs
+
+# Copy only necessary files from builder
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps ./apps
+COPY --from=builder /app/packages ./packages
+
+# Change ownership
+RUN chown -R nodejs:nodejs /app
+
+USER nodejs
+
+EXPOSE 4000
+
+CMD ["node", "apps/api/src/server.js"]

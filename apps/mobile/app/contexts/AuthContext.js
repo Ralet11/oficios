@@ -1,5 +1,7 @@
 const React = require('react');
+const { hasRole } = require('@oficios/domain');
 const { api } = require('../services/api');
+const { APP_MODES, clearActiveMode, getActiveMode, saveActiveMode } = require('../services/sessionMode');
 
 const AuthContext = React.createContext(null);
 
@@ -9,19 +11,35 @@ function AuthProvider({ children }) {
   const [user, setUser] = React.useState(null);
   const [professionalProfile, setProfessionalProfile] = React.useState(null);
   const [customerProfile, setCustomerProfile] = React.useState(null);
+  const [activeMode, setActiveMode] = React.useState(APP_MODES.CUSTOMER);
+
+  const syncActiveMode = React.useCallback(async (nextUser, preferredMode) => {
+    const nextMode =
+      hasRole(nextUser, APP_MODES.PROFESSIONAL) && preferredMode === APP_MODES.PROFESSIONAL
+        ? APP_MODES.PROFESSIONAL
+        : APP_MODES.CUSTOMER;
+
+    setActiveMode(nextMode);
+    await saveActiveMode(nextMode);
+    return nextMode;
+  }, []);
 
   const hydrate = React.useCallback(async () => {
     try {
       const storedToken = await api.getToken();
       if (!storedToken) {
+        setActiveMode(APP_MODES.CUSTOMER);
+        await clearActiveMode();
         setBooting(false);
         return;
       }
 
+      const storedMode = await getActiveMode();
       const response = await api.me(storedToken);
       setToken(storedToken);
       setUser(response.user);
       setProfessionalProfile(response.professionalProfile);
+      await syncActiveMode(response.user, storedMode);
 
       try {
         const customerRes = await api.myCustomerProfile(storedToken);
@@ -31,14 +49,16 @@ function AuthProvider({ children }) {
       }
     } catch (_error) {
       await api.clearToken();
+      await clearActiveMode();
       setToken(null);
       setUser(null);
       setProfessionalProfile(null);
       setCustomerProfile(null);
+      setActiveMode(APP_MODES.CUSTOMER);
     } finally {
       setBooting(false);
     }
-  }, []);
+  }, [syncActiveMode]);
 
   React.useEffect(() => {
     hydrate();
@@ -48,8 +68,11 @@ function AuthProvider({ children }) {
     await api.saveToken(session.token);
     setToken(session.token);
     setUser(session.user);
+    const storedMode = await getActiveMode();
     const response = await api.me(session.token);
+    setUser(response.user);
     setProfessionalProfile(response.professionalProfile);
+    await syncActiveMode(response.user, storedMode);
 
     try {
       const customerRes = await api.myCustomerProfile(session.token);
@@ -94,9 +117,11 @@ function AuthProvider({ children }) {
       return null;
     }
 
+    const storedMode = await getActiveMode();
     const response = await api.me(token);
     setUser(response.user);
     setProfessionalProfile(response.professionalProfile);
+    await syncActiveMode(response.user, storedMode);
 
     try {
       const customerRes = await api.myCustomerProfile(token);
@@ -115,10 +140,12 @@ function AuthProvider({ children }) {
     } catch (_error) {
     } finally {
       await api.clearToken();
+      await clearActiveMode();
       setToken(null);
       setUser(null);
       setProfessionalProfile(null);
       setCustomerProfile(null);
+      setActiveMode(APP_MODES.CUSTOMER);
     }
   }
 
@@ -126,10 +153,29 @@ function AuthProvider({ children }) {
     const response = await api.activateProfessionalRole(body, token);
     setUser(response.user);
     setProfessionalProfile(response.professionalProfile);
+    await syncActiveMode(response.user, APP_MODES.PROFESSIONAL);
     return response;
   }
 
+  async function switchToCustomerMode() {
+    setActiveMode(APP_MODES.CUSTOMER);
+    await saveActiveMode(APP_MODES.CUSTOMER);
+    return APP_MODES.CUSTOMER;
+  }
+
+  async function switchToProfessionalMode() {
+    if (!hasRole(user, APP_MODES.PROFESSIONAL)) {
+      return false;
+    }
+
+    setActiveMode(APP_MODES.PROFESSIONAL);
+    await saveActiveMode(APP_MODES.PROFESSIONAL);
+    return true;
+  }
+
   const value = {
+    activeMode,
+    appModes: APP_MODES,
     booting,
     token,
     user,
@@ -144,6 +190,8 @@ function AuthProvider({ children }) {
     signOut,
     refreshSession,
     activateProfessionalRole,
+    switchToCustomerMode,
+    switchToProfessionalMode,
     setProfessionalProfile,
     setUser,
     setCustomerProfile,

@@ -1,5 +1,7 @@
 const { palette } = require('./app/theme/palette');
 
+const googleMapsApiKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_API_KEY;
+
 module.exports = {
   expo: {
     name: 'Oficios Marketplace',
@@ -13,8 +15,23 @@ module.exports = {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
+      ...(googleMapsApiKey
+        ? {
+            config: {
+              googleMapsApiKey,
+            },
+          }
+        : {}),
     },
-    android: {},
+    android: googleMapsApiKey
+      ? {
+          config: {
+            googleMaps: {
+              apiKey: googleMapsApiKey,
+            },
+          },
+        }
+      : {},
     web: {
       bundler: 'metro',
     },

@@ -134,6 +134,10 @@ const api = {
   serviceNeed(id, token) {
     return request(`/service-needs/${id}`, { token });
   },
+  opportunities(query, token) {
+    const queryString = buildQuery(query || {});
+    return request(`/service-needs/opportunities${queryString}`, { token });
+  },
   createServiceNeed(body, token) {
     return request('/service-needs', { method: 'POST', token, body });
   },
@@ -148,6 +152,9 @@ const api = {
   },
   cancelServiceNeed(id, token) {
     return request(`/service-needs/${id}/cancel`, { method: 'POST', token });
+  },
+  publishServiceNeed(id, token) {
+    return request(`/service-needs/${id}`, { method: 'PATCH', token, body: { visibility: 'PUBLIC_BOARD', status: 'OPEN' } });
   },
   serviceRequests(query, token) {
     return request(`/service-requests${buildQuery(query)}`, { token });

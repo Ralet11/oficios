@@ -30,6 +30,20 @@ function formatLocation(professional) {
   return [professional.city, professional.province].filter(Boolean).join(', ') || 'Argentina';
 }
 
+function formatDistance(distanceKm) {
+  const value = Number(distanceKm);
+
+  if (!Number.isFinite(value)) {
+    return null;
+  }
+
+  if (value < 1) {
+    return `${Math.max(100, Math.round(value * 1000))} m`;
+  }
+
+  return `${value.toFixed(value < 10 ? 1 : 0)} km`;
+}
+
 function SelectProfessionalsScreen({ navigation }) {
   const route = useRoute();
   const { token } = useAuth();
@@ -57,6 +71,9 @@ function SelectProfessionalsScreen({ navigation }) {
       }
 
       const response = await api.professionals({
+        ...(typeof serviceNeed?.lat === 'number' && typeof serviceNeed?.lng === 'number'
+          ? { lat: serviceNeed.lat, lng: serviceNeed.lng }
+          : {}),
         page: 1,
         pageSize: 30,
         text: nextFilters.text || undefined,
@@ -93,6 +110,7 @@ function SelectProfessionalsScreen({ navigation }) {
       setCustomerMessage(detail.description || '');
 
       const professionalsResponse = await api.professionals({
+        ...(typeof detail.lat === 'number' && typeof detail.lng === 'number' ? { lat: detail.lat, lng: detail.lng } : {}),
         page: 1,
         pageSize: 30,
         categoryId: nextFilters.categoryId || undefined,
@@ -298,6 +316,12 @@ function SelectProfessionalsScreen({ navigation }) {
                     <Ionicons color={palette.warning} name="star" size={14} />
                     <Text style={styles.metaPillText}>{formatRating(professional)}</Text>
                   </View>
+                  {formatDistance(professional.distanceKm) ? (
+                    <View style={styles.metaPill}>
+                      <Ionicons color={palette.accentDark} name="navigate-outline" size={14} />
+                      <Text style={styles.metaPillText}>{formatDistance(professional.distanceKm)}</Text>
+                    </View>
+                  ) : null}
                   <View style={styles.metaPill}>
                     <Ionicons color={palette.accentDark} name="time-outline" size={14} />
                     <Text style={styles.metaPillText}>{professional.availableNow ? 'Disponible' : 'Coordinar'}</Text>

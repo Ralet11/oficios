@@ -7,6 +7,7 @@ const { LinearGradient } = require('expo-linear-gradient');
 const { hasRole } = require('@oficios/domain');
 const { useAuth } = require('../contexts/AuthContext');
 const { LoadingView } = require('../components/LoadingView');
+const { APP_MODES } = require('../services/sessionMode');
 const { navigation, palette } = require('../theme');
 const { WelcomeScreen } = require('../screens/WelcomeScreen');
 const { LoginScreen } = require('../screens/LoginScreen');
@@ -37,7 +38,8 @@ const Tab = createBottomTabNavigator();
 const TAB_ICONS = {
   Home:         { active: 'home-variant',       inactive: 'home-variant-outline' },
   Requests:     { active: 'clipboard-list',      inactive: 'clipboard-list-outline' },
-  Professional: { active: 'briefcase',           inactive: 'briefcase-outline' },
+  Oportunidades: { active: 'briefcase-search',    inactive: 'briefcase-search-outline' },
+  ProfessionalHub: { active: 'briefcase',           inactive: 'briefcase-outline' },
   Admin:        { active: 'shield-crown',         inactive: 'shield-crown-outline' },
   Account:      { active: 'account-circle',      inactive: 'account-circle-outline' },
 };
@@ -101,47 +103,69 @@ function AuthNavigator() {
   );
 }
 
-function AppTabs() {
+function getTabScreenOptions(route) {
+  return {
+    headerShown: false,
+    tabBarActiveTintColor: navigation.tabBarActiveTint,
+    tabBarInactiveTintColor: navigation.tabBarInactiveTint,
+    tabBarStyle: {
+      height: 84,
+      paddingTop: 8,
+      paddingBottom: 14,
+      paddingHorizontal: 12,
+      backgroundColor: navigation.tabBarBackground,
+      borderTopWidth: 0,
+      shadowColor: palette.black,
+      shadowOpacity: 0.09,
+      shadowOffset: { width: 0, height: -8 },
+      shadowRadius: 20,
+      elevation: 18,
+    },
+    tabBarLabelStyle: {
+      fontSize: 10,
+      fontWeight: '700',
+      marginTop: 2,
+    },
+    tabBarIcon: ({ focused }) => (
+      <TabIcon routeName={route.name} focused={focused} />
+    ),
+  };
+}
+
+function CustomerTabs() {
   const { user } = useAuth();
-  const isProfessional = hasRole(user, 'PROFESSIONAL');
   const isAdmin = hasRole(user, 'ADMIN');
 
   return (
     <Tab.Navigator
-      screenOptions={({ route }) => ({
-        headerShown: false,
-        tabBarActiveTintColor: navigation.tabBarActiveTint,
-        tabBarInactiveTintColor: navigation.tabBarInactiveTint,
-        tabBarStyle: {
-          height: 84,
-          paddingTop: 8,
-          paddingBottom: 14,
-          paddingHorizontal: 12,
-          backgroundColor: navigation.tabBarBackground,
-          borderTopWidth: 0,
-          shadowColor: palette.black,
-          shadowOpacity: 0.09,
-          shadowOffset: { width: 0, height: -8 },
-          shadowRadius: 20,
-          elevation: 18,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '700',
-          marginTop: 2,
-        },
-        tabBarIcon: ({ focused }) => (
-          <TabIcon routeName={route.name} focused={focused} />
-        ),
-      })}
+      screenOptions={({ route }) => getTabScreenOptions(route)}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: 'Inicio' }} />
-      <Tab.Screen name="Requests" component={RequestsScreen} options={{ title: 'Reservas' }} />
-      <Tab.Screen
-        name="Professional"
-        component={ProfessionalHubScreen}
-        options={{ title: isProfessional ? 'Mi Hub' : 'Ser Pro' }}
-      />
+      <Tab.Screen name="Requests" component={RequestsScreen} options={{ title: 'Mis problemas' }} />
+      {isAdmin ? (
+        <Tab.Screen name="Admin" component={AdminDashboardScreen} options={{ title: 'Admin' }} />
+      ) : null}
+      <Tab.Screen name="Account" component={AccountScreen} options={{ title: 'Cuenta' }} />
+    </Tab.Navigator>
+  );
+}
+
+function ProfessionalTabs() {
+  const { user, professionalProfile } = useAuth();
+  const isAdmin = hasRole(user, 'ADMIN');
+  const isApprovedProfessional = professionalProfile?.status === 'APPROVED';
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => getTabScreenOptions(route)}
+    >
+      {isApprovedProfessional ? (
+        <Tab.Screen name="Requests" component={RequestsScreen} options={{ title: 'Conversaciones' }} />
+      ) : null}
+      {isApprovedProfessional ? (
+        <Tab.Screen name="Oportunidades" component={OpportunitiesBoardScreen} options={{ title: 'Oportunidades' }} />
+      ) : null}
+      <Tab.Screen name="ProfessionalHub" component={ProfessionalHubScreen} options={{ title: 'Mi Hub' }} />
       {isAdmin ? (
         <Tab.Screen name="Admin" component={AdminDashboardScreen} options={{ title: 'Admin' }} />
       ) : null}
@@ -151,6 +175,9 @@ function AppTabs() {
 }
 
 function AppNavigator() {
+  const { activeMode } = useAuth();
+  const isProfessionalMode = activeMode === APP_MODES.PROFESSIONAL;
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -160,8 +187,11 @@ function AppNavigator() {
         headerShadowVisible: false,
       }}
     >
-      <Stack.Screen name="Tabs" component={AppTabs} options={{ headerShown: false }} />
-      <Stack.Screen name="ProfessionalDetail" component={ProfessionalDetailScreen} options={{ title: 'Profesional' }} />
+      <Stack.Screen name="Tabs" options={{ headerShown: false }}>
+        {() => (isProfessionalMode ? <ProfessionalTabs /> : <CustomerTabs />)}
+      </Stack.Screen>
+      <Stack.Screen name="ProfessionalDetail" component={ProfessionalDetailScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ProfessionalHubEntry" component={ProfessionalHubScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CreateServiceRequest" component={CreateServiceRequestScreen} options={{ title: 'Nueva solicitud' }} />
       <Stack.Screen name="RequestDetail" component={RequestDetailScreen} options={{ title: 'Solicitud' }} />
       <Stack.Screen name="ServiceNeedComposer" component={ServiceNeedComposerScreen} options={{ title: 'Nuevo problema' }} />
@@ -178,13 +208,13 @@ function AppNavigator() {
 }
 
 function RootNavigator() {
-  const { booting, signedIn } = useAuth();
+  const { activeMode, booting, signedIn } = useAuth();
 
   if (booting) {
     return <LoadingView label="Preparando tu sesion..." />;
   }
 
-  return signedIn ? <AppNavigator /> : <AuthNavigator />;
+  return signedIn ? <AppNavigator key={activeMode} /> : <AuthNavigator />;
 }
 
 module.exports = { RootNavigator };

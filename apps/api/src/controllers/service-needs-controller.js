@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const {
   NotificationType,
   ServiceNeedStatus,
+  ServiceNeedVisibility,
   ServiceRequestCloseReason,
   ServiceRequestOrigin,
   ServiceRequestStatus,
@@ -140,6 +141,18 @@ function ensureServiceNeedReadyForDispatch(serviceNeed) {
   }
 }
 
+function buildServiceNeedDraftSnapshot(serviceNeed, payload = {}) {
+  return {
+    categoryId: payload.categoryId !== undefined ? payload.categoryId : serviceNeed.categoryId,
+    title: payload.title !== undefined ? payload.title : serviceNeed.title,
+    description: payload.description !== undefined ? payload.description : serviceNeed.description,
+    city: payload.city !== undefined ? payload.city : serviceNeed.city,
+    province: payload.province !== undefined ? payload.province : serviceNeed.province,
+    addressLine: payload.addressLine !== undefined ? payload.addressLine : serviceNeed.addressLine,
+    visibility: payload.visibility !== undefined ? payload.visibility : serviceNeed.visibility,
+  };
+}
+
 async function listServiceNeeds(req, res) {
   const filters = req.validated.query;
   const page = filters.page || 1;
@@ -215,6 +228,16 @@ async function updateServiceNeed(req, res) {
 
   await ensureCategoryExists(req.models, payload.categoryId);
 
+  const payloadKeys = Object.keys(payload);
+  const nextDraftSnapshot = buildServiceNeedDraftSnapshot(serviceNeed, payload);
+  const isPublishingToBoard =
+    nextDraftSnapshot.visibility === ServiceNeedVisibility.PUBLIC_BOARD &&
+    serviceNeed.visibility !== ServiceNeedVisibility.PUBLIC_BOARD;
+
+  if (isPublishingToBoard) {
+    ensureServiceNeedReadyForDispatch(nextDraftSnapshot);
+  }
+
   if (serviceNeed.status === ServiceNeedStatus.OPEN) {
     const activeRequestsCount = await req.models.ServiceRequest.count({
       where: {
@@ -223,12 +246,24 @@ async function updateServiceNeed(req, res) {
       },
     });
 
-    if (activeRequestsCount > 0) {
+    const canMutateWithActiveThreads =
+      activeRequestsCount > 0 &&
+      payloadKeys.length === 1 &&
+      payload.visibility === ServiceNeedVisibility.PUBLIC_BOARD &&
+      serviceNeed.visibility !== ServiceNeedVisibility.PUBLIC_BOARD;
+
+    if (activeRequestsCount > 0 && !canMutateWithActiveThreads) {
       throw new AppError('This service need cannot be edited while it has active threads', 422);
     }
   }
 
-  await serviceNeed.update(payload);
+  const shouldOpen = payload.visibility === ServiceNeedVisibility.PUBLIC_BOARD && serviceNeed.status === ServiceNeedStatus.DRAFT;
+
+  await serviceNeed.update({
+    ...payload,
+    ...(isPublishingToBoard ? { publishedAt: new Date() } : {}),
+    ...(shouldOpen ? { status: ServiceNeedStatus.OPEN } : {}),
+  });
 
   res.json({
     data: serializeServiceNeedDetail(await loadServiceNeed(req, serviceNeed.id), req.auth.user.id, {
@@ -527,13 +562,23 @@ async function cancelServiceNeed(req, res) {
 }
 
 async function listOpportunityNeeds(req, res) {
-  const filters = req.validated.query;
-  const page = filters.page || 1;
-  const pageSize = filters.pageSize || 10;
-  const where = {
-    visibility: ServiceNeedVisibility.PUBLIC_BOARD,
-    status: ServiceNeedStatus.OPEN,
-  };
+  try {
+    const filters = req.query || {};
+    
+    const rawPage = parseInt(filters.page, 10);
+    const page = Number.isInteger(rawPage) && rawPage >= 1 ? rawPage : 1;
+    
+    const rawPageSize = parseInt(filters.pageSize, 10);
+    const pageSize = Number.isInteger(rawPageSize) && rawPageSize >= 1 && rawPageSize <= 50 ? rawPageSize : 10;
+    
+    console.log('QUERY:', req.query);
+    console.log('PAGE:', page, 'PAGESIZE:', pageSize);
+    console.log('OFFSET:', (page - 1) * pageSize, 'LIMIT:', pageSize);
+    
+    const where = {
+      visibility: ServiceNeedVisibility.PUBLIC_BOARD,
+      status: ServiceNeedStatus.OPEN,
+    };
 
   if (filters.categoryId) {
     where.categoryId = filters.categoryId;
@@ -550,24 +595,30 @@ async function listOpportunityNeeds(req, res) {
     ];
   }
 
+  console.log('WHERE:', JSON.stringify(where));
+  console.log('OFFSET:', (page - 1) * pageSize, 'LIMIT:', pageSize);
+  
   const { rows, count } = await req.models.ServiceNeed.findAndCountAll({
     where,
-    include: [{ model: req.models.Category, as: 'category' }],
     distinct: true,
     order: [['publishedAt', 'DESC']],
     offset: (page - 1) * pageSize,
     limit: pageSize,
   });
 
-  res.json({
-    data: rows.map((item) => serializeServiceNeedSummary(item, { includeContact: false })),
-    pagination: {
-      page,
-      pageSize,
-      total: count,
-      totalPages: Math.max(1, Math.ceil(count / pageSize)),
-    },
-  });
+    res.json({
+      data: rows.map((item) => serializeServiceNeedSummary(item, { includeContact: false })),
+      pagination: {
+        page: page,
+        pageSize: pageSize,
+        total: count,
+        totalPages: Math.max(1, Math.ceil(count / pageSize)),
+      },
+    });
+  } catch (error) {
+    console.error('ERROR EN LIST_OPPORTUNITY_NEEDS:', error);
+    throw error;
+  }
 }
 
 async function getOpportunityNeed(req, res) {

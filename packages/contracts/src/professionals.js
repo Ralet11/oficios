@@ -23,6 +23,27 @@ const searchProfessionalsSchema = paginationSchema.extend({
     .default(ServiceRequestSort.RELEVANCE),
 });
 
+const professionalPersonalDetailsSchema = z.object({
+  age: z.coerce.number().int().min(18).max(99).optional(),
+  nationality: z.string().min(2).max(80).optional(),
+  languages: z.array(z.string().min(2).max(40)).max(6).default([]),
+});
+
+const professionalCertificationSchema = z.object({
+  title: z.string().min(2).max(120),
+  issuer: z.string().min(2).max(120),
+  year: z.coerce.number().int().min(1950).max(2100).optional(),
+  credentialId: z.string().min(2).max(80).optional(),
+  evidenceUrl: z.string().url().optional(),
+});
+
+const professionalReferenceSchema = z.object({
+  name: z.string().min(2).max(120),
+  relationship: z.string().min(2).max(80),
+  summary: z.string().min(10).max(280),
+  location: z.string().min(2).max(120).optional(),
+});
+
 const professionalProfileSchema = z.object({
   businessName: z.string().min(2),
   headline: z.string().min(2),
@@ -40,6 +61,9 @@ const professionalProfileSchema = z.object({
   avatarUrl: z.string().url().optional(),
   coverUrl: z.string().url().optional(),
   photoUrls: z.array(z.string().url()).max(10).default([]),
+  personalDetails: professionalPersonalDetailsSchema.default({ languages: [] }),
+  certifications: z.array(professionalCertificationSchema).max(8).default([]),
+  references: z.array(professionalReferenceSchema).max(8).default([]),
 });
 
 const professionalWorkPostSchema = z.object({
@@ -86,7 +110,10 @@ const professionalStatusSchema = z.object({
 
 module.exports = {
   professionalCategoriesSchema,
+  professionalCertificationSchema,
+  professionalPersonalDetailsSchema,
   professionalProfileSchema,
+  professionalReferenceSchema,
   professionalServiceAreaSchema,
   professionalStatusSchema,
   professionalWorkPostSchema,

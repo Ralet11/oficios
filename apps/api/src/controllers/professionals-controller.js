@@ -205,6 +205,14 @@ async function submitProfessionalForApproval(req, res) {
     throw new AppError('Professional profile not found', 404);
   }
 
+  if (professional.status === ProfessionalStatus.APPROVED) {
+    throw new AppError('Professional profile already approved', 409);
+  }
+
+  if (professional.status === ProfessionalStatus.PENDING_APPROVAL) {
+    throw new AppError('Professional profile already pending approval', 409);
+  }
+
   if (!professional.bio || !professional.headline || !professional.contactPhone) {
     throw new AppError('Complete profile information before submitting for approval', 422);
   }

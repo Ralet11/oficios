@@ -11,7 +11,6 @@ async function searchProfessionals(models, filters) {
         ? { ratingAverage: { [Op.gte]: filters.minRating } }
         : {}),
       ...(filters.availableNow ? { availableNow: true } : {}),
-      ...(filters.placeId ? { placeId: filters.placeId } : {}),
       ...(filters.text
         ? {
             [Op.or]: [
@@ -38,16 +37,39 @@ async function searchProfessionals(models, filters) {
 
   let items = profiles.map((profile) => {
     const serialized = serializeProfessional(profile);
-    const distanceKm =
-      typeof filters.lat === 'number' && typeof filters.lng === 'number'
-        ? getDistanceKm(filters.lat, filters.lng, profile.lat, profile.lng)
-        : null;
+    const distanceCandidates = [];
+
+    if (typeof filters.lat === 'number' && typeof filters.lng === 'number') {
+      const profileDistance = getDistanceKm(filters.lat, filters.lng, profile.lat, profile.lng);
+
+      if (profileDistance !== null) {
+        distanceCandidates.push(profileDistance);
+      }
+
+      (profile.serviceAreas || []).forEach((area) => {
+        const areaDistance = getDistanceKm(filters.lat, filters.lng, area.lat, area.lng);
+
+        if (areaDistance !== null) {
+          distanceCandidates.push(areaDistance);
+        }
+      });
+    }
+
+    const distanceKm = distanceCandidates.length ? Math.min(...distanceCandidates) : null;
 
     return {
       ...serialized,
       distanceKm,
     };
   });
+
+  if (filters.placeId) {
+    items = items.filter(
+      (item) =>
+        item.placeId === filters.placeId ||
+        (item.serviceAreas || []).some((area) => area.placeId === filters.placeId),
+    );
+  }
 
   if (typeof filters.radiusKm === 'number') {
     items = items.filter((item) => item.distanceKm !== null && item.distanceKm <= filters.radiusKm);

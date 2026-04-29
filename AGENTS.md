@@ -35,6 +35,7 @@ Este archivo es la fuente de verdad operativa para humanos y agentes de IA que t
 
 - Activacion del rol profesional sin perder rol cliente.
 - Edicion de perfil profesional, fotos, zonas y categorias.
+- Carga opcional de datos personales de presentacion, certificaciones y referencias declaradas.
 - Gestion de disponibilidad basica.
 - Publicacion de trabajos previos en formato post con multiples fotos, texto y mensajes cortos.
 - Carga de fotos de trabajos previos desde camara o galeria mobile con provider de media configurable.
@@ -116,8 +117,11 @@ Este archivo es la fuente de verdad operativa para humanos y agentes de IA que t
 - Maximo una resena por `serviceRequest`.
 - Mensajeria solo entre participantes de la solicitud.
 - Los trabajos previos del profesional son visibles en perfil publico cuando el perfil esta `APPROVED`; el owner puede editarlos siempre desde su hub.
+- Los datos personales de presentacion del profesional son opcionales y no bloquean la aprobacion del perfil.
+- Las referencias visibles en el MVP son declaradas por el profesional y no implican verificacion por parte de la plataforma.
 - Las fotos de trabajos previos del profesional se suben por upload directo a un provider configurable desde backend; Cloudinary es el default inicial.
 - Las fotos de `ServiceNeed` del cliente se suben por upload directo a un provider configurable desde backend; Cloudinary es el default inicial.
+- Google Maps/Places se incorpora primero para capturar ubicaciones del profesional y del `ServiceNeed`; no para exponer pines exactos publicamente.
 - La publicacion en tablero no revela contacto externo del cliente ni del profesional hasta que exista `ServiceRequestStatus.ACCEPTED`.
 - La API publica principal de busqueda es:
   `GET /professionals?categoryId&placeId&lat&lng&radiusKm&minRating&availableNow&text&sort&page&pageSize`
@@ -173,6 +177,8 @@ Cada app mantiene su `.env.example` y valida boot-time con Zod.
 - 2026-04-26: el cliente puede enviar un mismo problema a varios profesionales o publicarlo en un tablero general de oportunidades.
 - 2026-04-26: un profesional no acepta por solo responder; la aceptacion ocurre recien despues de seleccion del cliente y confirmacion del profesional.
 - 2026-04-26: la asistencia IA para ayudar a diagnosticar y redactar problemas queda fuera del primer bloque de implementacion.
+- 2026-04-29: el perfil profesional suma datos personales opcionales, certificaciones y referencias declaradas como capas publicas adicionales del perfil.
+- 2026-04-29: Google Maps/Places entra primero en la captura de ubicacion base del profesional, sus zonas de servicio y la ubicacion del problema del cliente.
 
 ## Open questions
 

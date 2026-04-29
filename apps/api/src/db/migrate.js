@@ -4,6 +4,7 @@ const migrationReviewerRole = require('../migrations/20250425000001-add-reviewer
 const migrationServiceNeeds = require('../migrations/20250426000000-create-service-needs');
 const migrationServiceRequestNeedFields = require('../migrations/20250426000001-add-service-need-fields-to-service-requests');
 const migrationServiceRequestNeedUniqueIndex = require('../migrations/20250426000002-adjust-service-request-service-need-unique-index');
+const migrationProfessionalProfilePublicDetails = require('../migrations/20250429000000-add-professional-profile-public-details');
 const { DataTypes } = require('sequelize');
 
 async function runMigrationStep(label, migration, sequelizeTypes) {
@@ -90,6 +91,10 @@ async function migrate() {
       migrationServiceRequestNeedUniqueIndex,
       {},
     );
+
+    await runMigrationStep('Migration 6: add public profile enrichment fields', migrationProfessionalProfilePublicDetails, {
+      JSONB: DataTypes.JSONB,
+    });
 
     console.log('All migrations ran successfully.');
   } catch (err) {

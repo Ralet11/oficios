@@ -24,6 +24,7 @@ const apiEnvSchema = z.object({
 
 const mobileEnvSchema = z.object({
   EXPO_PUBLIC_API_URL: z.string().url(),
+  EXPO_PUBLIC_GOOGLE_MAPS_API_KEY: z.string().min(1).optional(),
 });
 
 function parseApiEnv(env) {

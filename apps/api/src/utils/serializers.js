@@ -25,6 +25,43 @@ function serializeCategory(category) {
   };
 }
 
+function serializeProfessionalPersonalDetails(personalDetails) {
+  const source = personalDetails || {};
+
+  return {
+    age: Number.isInteger(source.age) ? source.age : null,
+    nationality: source.nationality || null,
+    languages: Array.isArray(source.languages) ? source.languages.filter(Boolean) : [],
+  };
+}
+
+function serializeProfessionalCertification(certification) {
+  if (!certification) {
+    return null;
+  }
+
+  return {
+    title: certification.title,
+    issuer: certification.issuer,
+    year: Number.isInteger(certification.year) ? certification.year : null,
+    credentialId: certification.credentialId || null,
+    evidenceUrl: certification.evidenceUrl || null,
+  };
+}
+
+function serializeProfessionalReference(reference) {
+  if (!reference) {
+    return null;
+  }
+
+  return {
+    name: reference.name,
+    relationship: reference.relationship,
+    summary: reference.summary,
+    location: reference.location || null,
+  };
+}
+
 function serializeProfessional(profile, options = {}) {
   const includeContact = options.includeContact === true;
   const workPosts = [...(profile.workPosts || [])].sort((left, right) => {
@@ -56,6 +93,9 @@ function serializeProfessional(profile, options = {}) {
     avatarUrl: profile.avatarUrl,
     coverUrl: profile.coverUrl,
     photoUrls: profile.photoUrls || [],
+    personalDetails: serializeProfessionalPersonalDetails(profile.personalDetails),
+    certifications: (profile.certifications || []).map(serializeProfessionalCertification).filter(Boolean),
+    references: (profile.references || []).map(serializeProfessionalReference).filter(Boolean),
     user: profile.user ? serializeUser(profile.user) : undefined,
     categories: profile.categories?.map((category) => serializeCategory(category)),
     serviceAreas: profile.serviceAreas?.map((area) => ({

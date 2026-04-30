@@ -1,11 +1,17 @@
 {
-  "name": "oficios-marketplace",
+  "name": "oficios",
   "version": "1.0.0",
   "private": true,
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "devDependencies": {
+    "expo-font": "14.0.11"
+  },
+  "overrides": {
+    "expo-font": "14.0.11"
+  },
   "scripts": {
     "dev:api": "npm --workspace @oficios/api run dev",
     "dev:mobile": "npm --workspace @oficios/mobile run start",

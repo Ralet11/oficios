@@ -1,4 +1,4 @@
-# Oficios Marketplace
+# Oficios
 
 Monorepo JavaScript para el MVP definido en `AGENTS.md`.
 

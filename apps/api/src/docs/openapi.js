@@ -2,9 +2,9 @@ function buildOpenApiDocument() {
   return {
     openapi: '3.0.0',
     info: {
-      title: 'Oficios Marketplace API',
+      title: 'Oficios API',
       version: '1.0.0',
-      description: 'REST API para el MVP de marketplace de oficios en Argentina.',
+      description: 'REST API para el MVP de oficios en Argentina.',
     },
     servers: [{ url: 'http://localhost:4000' }],
     tags: [
